@@ -125,19 +125,7 @@ def create_app(config_name=None):
         shutdown_server()
         return "Server shutting down..."
 
-    @app.before_request
-    def handle_options_request():
-        if request.method == "OPTIONS":
-            response = current_app.make_default_options_response()
 
-            # Add CORS headers
-            headers = response.headers
-            headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-            headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-            headers["Access-Control-Allow-Credentials"] = "true"
-
-            return response
 
     # Create upload directories if they don't exist
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

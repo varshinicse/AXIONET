@@ -13,7 +13,7 @@ class SocketService {
     connect(email) {
         if (!this.socket) {
             // console.log('Creating new socket connection');
-            this.socket = io('http://localhost:5000', {
+            this.socket = io('http://localhost:5001', {
                 transports: ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 5,
