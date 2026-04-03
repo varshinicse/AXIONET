@@ -1,12 +1,10 @@
 .signup-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.748) 0%,
-            rgba(170, 38, 251, 0.9) 25%,
-            rgba(80, 90, 241, 0.9) 50%,
-            rgba(0, 0, 0, 0.9) 75%,
-            rgba(82, 70, 240, 0.9) 100%);
-    background-size: 400% 400%;
-    animation: auroraBG 15s ease infinite;
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+        url('../../../assets/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;

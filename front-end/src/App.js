@@ -37,6 +37,10 @@ const ProjectDetail = React.lazy(() => import('./components/projects/ProjectDeta
 const NewsDetail = React.lazy(() => import('./components/news-events/NewsDetail/NewsDetail'));
 
 
+const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword/ResetPassword'));
+const ForgotPassword = React.lazy(() => import('./components/auth/ForgotPassword/ForgotPassword'));
+
+
 function App() {
   const location = useLocation();
   const showHeader = !['/signin', '/signup'].includes(location.pathname);
@@ -67,6 +71,16 @@ function App() {
             {/* Public Routes - keep these without Suspense */}
             <Route path="/signin" element={<Signin />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <ForgotPassword />
+              </Suspense>
+            } />
+            <Route path="/reset-password" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <ResetPassword />
+              </Suspense>
+            } />
 
             {/* Protected Routes - wrap with Suspense */}
             <Route path="/feeds" element={

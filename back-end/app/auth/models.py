@@ -101,6 +101,32 @@ class User:
             return False
 
     @staticmethod
+    def set_password(email, new_password):
+        """
+        Set a new password for a user.
+
+        Args:
+            email: Email of the user
+            new_password: The new plain text password
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if isinstance(new_password, str):
+                new_password = new_password.encode("utf-8")
+            hashed_pwd = generate_password_hash(new_password)
+            
+            result = users_collection.update_one(
+                {"email": email}, 
+                {"$set": {"password": hashed_pwd}}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            logger.error(f"Error setting password: {str(e)}")
+            return False
+
+    @staticmethod
     def verify_student_record(regno, dept, name=None, batch=None, is_alumni=False):
         """
         Verify if a student/alumni exists in the records.

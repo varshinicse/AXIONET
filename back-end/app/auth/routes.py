@@ -246,3 +246,60 @@ def submit_bug_report():
     except Exception as e:
         current_app.logger.error(f"Error submitting bug report: {str(e)}")
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+def forgot_password():
+    """
+    Simulate sending a password reset email.
+    In a real app, this would send a token via email.
+    """
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        
+        if not email:
+            return jsonify({"message": "Email is required"}), 400
+            
+        user = User.find_by_email(email)
+        # We return success even if user doesn't exist for security (avoid email enumeration)
+        # But for this project, we'll just be direct.
+        if not user:
+            return jsonify({"message": "If that email exists in our system, we've sent a reset link."}), 200
+            
+        # Simulate email sending
+        current_app.logger.info(f"Password reset requested for {email}")
+        
+        return jsonify({"message": "If that email exists in our system, we've sent a reset link."}), 200
+    except Exception as e:
+        current_app.logger.error(f"Forgot password error: {str(e)}")
+        return jsonify({"message": "An error occurred"}), 500
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    """
+    Reset user password.
+    In a real app, this would verify a token first.
+    For this simulation, we'll just allow it if the email exists.
+    """
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        new_password = data.get("password")
+        
+        if not email or not new_password:
+            return jsonify({"message": "Email and new password are required"}), 400
+            
+        user = User.find_by_email(email)
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+            
+        success = User.set_password(email, new_password)
+        if success:
+            return jsonify({"message": "Password reset successfully"}), 200
+        else:
+            return jsonify({"message": "Failed to reset password"}), 500
+    except Exception as e:
+        current_app.logger.error(f"Reset password error: {str(e)}")
+        return jsonify({"message": "An error occurred"}), 500

@@ -95,9 +95,12 @@ const Signin = () => {
                                     {loading ? 'Logging in...' : 'Login'}
                                 </button>
                             </form>
-                            <div className="text-center mt-3">
-                                <span>Don't have an account? </span>
-                                <Link to="/signup">Sign up</Link>
+                            <div className="text-center mt-3 d-flex justify-content-between align-items-center">
+                                <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Forgot Password?</Link>
+                                <div>
+                                    <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.9)' }}>Don't have an account? </span>
+                                    <Link to="/signup" style={{ fontSize: '0.85rem' }}>Sign up</Link>
+                                </div>
                             </div>
                         </div>
                     </div>

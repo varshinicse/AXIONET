@@ -383,18 +383,10 @@ const Signup = () => {
 
                     {error && <div className="error-message alert alert-danger">{error}</div>}
 
-                    <Button
-                        type="submit"
-                        className="signup-button"
-                        disabled={loading}
-                    >
-                        Create account
-                    </Button>
-
-                    <div className="login-link">
-                        Already have an account? <Link to="/signin">Log in</Link>
-                    </div>
                 </Form>
+                <div className="login-link mt-3 text-center">
+                    Already have an account? <Link to="/signin">Log in</Link>
+                </div>
             </div>
         </div>
     );
