@@ -28,7 +28,7 @@ const Footer = () => {
 
         try {
             // Send to your backend API
-            const response = await axios.post('http://localhost:5000/submit-bug-report', bugReport);
+            const response = await axios.post('http://127.0.0.1:5001/submit-bug-report', bugReport);
 
             if (response.status === 201) {
                 setSubmitStatus({ type: 'success', message: 'Bug report submitted successfully!' });
@@ -52,7 +52,7 @@ const Footer = () => {
                 <Row className="g-4">
                     <Col lg={4} md={6} sm={12}>
                         <div className="footer-section">
-                            <h3>About Nexum</h3>
+                            <h3>About AXIONET</h3>
                             <p>
                                 A social networking platform for collaborative learning and professional growth,
                                 connecting educational institutions, alumni, and students.
@@ -143,7 +143,7 @@ const Footer = () => {
                 <Row>
                     <Col className="text-center py-2">
                         <p className="copyright">
-                            &copy; {new Date().getFullYear()} Nexum. All rights reserved.
+                            &copy; {new Date().getFullYear()} AXIONET. All rights reserved.
                             <span className="made-with-love">
                                 Made with <FaHeart className="heart-icon" /> by <a href="mailto:moganram10@gmail.com">Mogan Ram</a>
                             </span>
