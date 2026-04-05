@@ -1,121 +1,186 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.jobs.models import Job
 from app.auth.models import User
 from app.utils.validators import validate_user_input
+from app import socketio
+import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 jobs_bp = Blueprint("jobs", __name__)
 
+ADZUNA_APP_ID = "8cd20775"
+ADZUNA_APP_KEY = "aefb4374c631a7a66b78b94e89c542ca"
+ADZUNA_URL = "https://api.adzuna.com/v1/api/jobs/in/search/1"
+RAPIDAPI_HOST = "jsearch.p.rapidapi.com"
+RAPIDAPI_URL = f"https://{RAPIDAPI_HOST}/search"
 
-@jobs_bp.route("", methods=["GET", "POST"])
-@jwt_required(optional=True)
-def handle_jobs():
-    if request.method == "GET":
-        # Get query parameters
-        page = int(request.args.get("page", 1))
-        limit = int(request.args.get("limit", 10))
-        search_term = request.args.get("search", None)
-        location = request.args.get("location", None)
-        job_type = request.args.get("job_type", None)
-        sort_by = request.args.get("sort_by", "created_at")
-        sort_order = request.args.get("sort_order", "-1")
+def fetch_adzuna_jobs(keyword, location):
+    """Fetch jobs from Adzuna API and parse the response."""
+    params = {
+        "app_id": ADZUNA_APP_ID,
+        "app_key": ADZUNA_APP_KEY,
+        "what": keyword,
+        "where": location,
+        "content-type": "application/json"
+    }
+    try:
+        response = requests.get(ADZUNA_URL, params=params, timeout=10)
+        response.raise_for_status()
+        results = response.json().get("results", [])
+        
+        return [{
+            "title": r.get("title"),
+            "company": r.get("company", {}).get("display_name"),
+            "location": r.get("location", {}).get("display_name"),
+            "description": r.get("description"),
+            "salary_min": r.get("salary_min"),
+            "salary_max": r.get("salary_max"),
+            "redirect_url": r.get("redirect_url"),
+            "posted_by": "Adzuna API"
+        } for r in results]
+    except Exception as e:
+        logger.error(f"Adzuna API error: {e}")
+        return []
 
-        # Get jobs
-        jobs_data = Job.get_all(
-            page, limit, search_term, location, job_type, sort_by, sort_order
-        )
-        return jsonify(jobs_data), 200
+def fetch_rapidapi_jobs(keyword, location):
+    """Fetch jobs from RapidAPI JSearch and normalize fields."""
+    import os
+    rapidapi_key = os.environ.get("RAPIDAPI_KEY")
+    if not rapidapi_key:
+        logger.warning("RAPIDAPI_KEY not found in environment variables")
+        return []
 
-    elif request.method == "POST":
-        # Check authentication
-        current_user = get_jwt_identity()
-        if not current_user:
-            return jsonify({"message": "Unauthorized"}), 401
+    headers = {
+        "X-RapidAPI-Key": rapidapi_key,
+        "X-RapidAPI-Host": RAPIDAPI_HOST
+    }
+    params = {
+        "query": f"{keyword} in {location}",
+        "page": "1",
+        "num_pages": "2"
+    }
+    try:
+        response = requests.get(RAPIDAPI_URL, headers=headers, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json().get("data", [])
+        
+        return [{
+            "title": r.get("job_title"),
+            "company": r.get("employer_name"),
+            "location": r.get("job_city", r.get("job_country", "Unknown")),
+            "description": r.get("job_description"),
+            "salary": r.get("job_salary"),
+            "redirect_url": r.get("job_apply_link"),
+            "source": "rapidapi",
+            "posted_by": "RapidAPI JSearch"
+        } for r in data]
+    except Exception as e:
+        logger.error(f"RapidAPI error: {e}")
+        return []
 
-        # Get user details
-        user = User.find_by_email(current_user)
-        if user["role"].lower() != "alumni":
-            return jsonify({"message": "Only alumni can post jobs"}), 403
+@jobs_bp.route("/rapidapi", methods=["GET"])
+def get_rapidapi_jobs():
+    """Fetch jobs directly from RapidAPI JSearch."""
+    query = request.args.get("q", "")
+    location = request.args.get("location", "")
+    jobs = fetch_rapidapi_jobs(query, location)
+    return jsonify(jobs), 200
 
-        # Get data
-        data = request.get_json()
+@jobs_bp.route("", methods=["GET"])
+def get_jobs():
+    """Return all jobs from MongoDB."""
+    page = int(request.args.get("page", 1))
+    limit = int(request.args.get("limit", 10))
+    return jsonify(Job.get_all(page=page, limit=limit)), 200
 
-        # Validate required fields
-        required_fields = [
-            "title",
-            "company",
-            "location",
-            "description",
-            "job_type",
-            "requirements",
-        ]
-        valid, error_msg = validate_user_input(data, required_fields=required_fields)
-        if not valid:
-            return jsonify({"message": error_msg}), 400
+@jobs_bp.route("/create-job", methods=["POST"])
+@jwt_required()
+def create_job():
+    """Accept job details, store in MongoDB, and emit new_job event."""
+    current_user = get_jwt_identity()
+    user = User.find_by_email(current_user)
+    
+    if not user or user["role"].lower() != "alumni":
+        return jsonify({"message": "Only alumni can post jobs"}), 403
 
-        # Validate job_type is a list
-        if not isinstance(data["job_type"], list):
-            return jsonify({"message": "job_type must be a list"}), 400
+    data = request.get_json()
+    required_fields = ["title", "company", "location", "description", "skills", "salary", "experience"]
+    
+    valid, error_msg = validate_user_input(data, required_fields=required_fields)
+    if not valid:
+        return jsonify({"message": error_msg}), 400
 
-        # Add user ID
-        data["posted_by"] = str(user["_id"])
+    data["posted_by"] = str(user["_id"])
+    job = Job.create(data)
 
-        # Create job
-        job_id = Job.create(data)
+    if job:
+        socketio.emit("new_job", job, broadcast=True)
+        return jsonify({"message": "Job created successfully", "id": job["_id"]}), 201
+    
+    return jsonify({"message": "Failed to create job"}), 500
 
-        return jsonify({"id": job_id}), 201
+@jobs_bp.route("/search", methods=["GET"])
+def search_jobs():
+    """Fetch jobs from both Adzuna and RapidAPI, store in MongoDB, and return merged list."""
+    query = request.args.get("q", "")
+    location = request.args.get("location", "")
 
+    if not query and not location:
+        return jsonify({"message": "Query or location parameter is required"}), 400
+
+    # 1. Fetch from Adzuna
+    adzuna_jobs = fetch_adzuna_jobs(query, location)
+    if adzuna_jobs:
+        Job.upsert_external_jobs(adzuna_jobs, "adzuna")
+    
+    # 2. Fetch from RapidAPI JSearch
+    rapidapi_jobs = fetch_rapidapi_jobs(query, location)
+    if rapidapi_jobs:
+        Job.upsert_external_jobs(rapidapi_jobs, "rapidapi")
+
+    # 3. Combine and return matching jobs from MongoDB (deduplicated by upsert logic)
+    results = Job.search(query)
+    
+    # If location was provided, filter results by location too
+    if location:
+        results = [j for j in results if location.lower() in j.get("location", "").lower()]
+
+    return jsonify(results), 200
+
+@jobs_bp.route("/apply", methods=["POST"])
+@jwt_required()
+def apply_job():
+    """Store job application (user_id, job_id)."""
+    current_user = get_jwt_identity()
+    user = User.find_by_email(current_user)
+    
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json()
+    job_id = data.get("job_id")
+    
+    if not job_id:
+        return jsonify({"message": "job_id is required"}), 400
+
+    application_id = Job.apply(str(user["_id"]), job_id)
+    
+    if application_id:
+        return jsonify({"message": "Application submitted successfully", "id": application_id}), 201
+    
+    return jsonify({"message": "Failed to submit application"}), 500
 
 @jobs_bp.route("/<id>", methods=["GET", "PUT", "DELETE"])
 @jwt_required(optional=True)
 def handle_single_job(id):
-    # Get job
     job = Job.get_by_id(id)
-
     if not job:
         return jsonify({"message": "Job not found"}), 404
 
     if request.method == "GET":
         return jsonify(job), 200
-
-    elif request.method == "PUT":
-        # Check authentication
-        current_user = get_jwt_identity()
-        user = User.find_by_email(current_user)
-
-        if (
-            not user
-            or user["role"].lower() != "alumni"
-            or str(user["_id"]) != job["posted_by"]
-        ):
-            return jsonify({"message": "Unauthorized"}), 403
-
-        # Get data
-        data = request.get_json()
-
-        # Update job
-        if Job.update(id, data):
-            return jsonify({"message": "Job updated successfully"}), 200
-        else:
-            return jsonify({"message": "Job not found or not modified."}), 400
-
-    elif request.method == "DELETE":
-        # Check authentication
-        current_user = get_jwt_identity()
-        user = User.find_by_email(current_user)
-
-        if not user:
-            return jsonify({"message": "Unauthorized"}), 403
-
-        # Check if user is authorized to delete
-        is_owner = str(user["_id"]) == job["posted_by"]
-        is_staff = user["role"].lower() == "staff"
-
-        if not (is_owner or is_staff):
-            return jsonify({"message": "Unauthorized"}), 403
-
-        # Delete job
-        if Job.delete(id):
-            return jsonify({"message": "Job deleted successfully"}), 200
-        else:
-            return jsonify({"message": "Job not found."}), 404
+        
+    return jsonify({"message": "Method not allowed for this route extension"}), 405

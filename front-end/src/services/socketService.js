@@ -8,6 +8,7 @@ class SocketService {
         this.messageCallbacks = [];
         this.messagesReadCallbacks = [];
         this.userStatusCallbacks = [];
+        this.newJobCallbacks = [];
     }
 
     connect(email) {
@@ -66,6 +67,11 @@ class SocketService {
         this.socket.on('user_status', (data) => {
             // console.log('Received user_status event:', data);
             this.userStatusCallbacks.forEach(callback => callback(data));
+        });
+
+        this.socket.on('new_job', (job) => {
+            // console.log('Received new_job event:', job);
+            this.newJobCallbacks.forEach(callback => callback(job));
         });
     }
 
@@ -159,7 +165,21 @@ class SocketService {
         }
     }
 
+    onNewJob(callback) {
+        if (typeof callback === 'function') {
+            this.newJobCallbacks.push(callback);
+        }
+    }
+
     // Remove event listeners
+    offNewJob(callback) {
+        if (callback) {
+            this.newJobCallbacks = this.newJobCallbacks.filter(cb => cb !== callback);
+        } else {
+            this.newJobCallbacks = [];
+        }
+    }
+
     offNewMessage(callback) {
         if (callback) {
             this.messageCallbacks = this.messageCallbacks.filter(cb => cb !== callback);

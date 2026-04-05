@@ -49,3 +49,23 @@
     /* Consistent casing */
 
 }
+
+.btn-apply-green {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: background-color 0.2s ease, transform 0.1s ease !important;
+}
+
+.btn-apply-green:hover {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+    transform: scale(1.02);
+}
+
+.btn-apply-green:active {
+    transform: scale(0.98);
+}

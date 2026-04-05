@@ -4,10 +4,21 @@ import axios from '../axios';
 const BASE_URL = '/jobs';
 
 export const jobService = {
-    getAllJobs: async (page = 1, limit = 10, search = '', location = '', jobType = '', sortBy = 'created_at', sortOrder = -1) => {
+    getAllJobs: async (page = 1, limit = 10) => {
         try {
             const response = await axios.get(BASE_URL, {
-                params: { page, limit, search, location, job_type: jobType, sort_by: sortBy, sort_order: sortOrder }
+                params: { page, limit }
+            });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    searchJobs: async (query = '', location = '') => {
+        try {
+            const response = await axios.get(`${BASE_URL}/search`, {
+                params: { q: query, location }
             });
             return response.data;
         } catch (error) {
@@ -17,7 +28,7 @@ export const jobService = {
 
     getJobById: async (id) => {
         try {
-            const response = await axios.get(`${BASE_URL}/${id}`); // Correct URL
+            const response = await axios.get(`${BASE_URL}/${id}`);
             return response.data;
         } catch (error) {
             throw error;
@@ -26,7 +37,16 @@ export const jobService = {
 
     createJob: async (jobData) => {
         try {
-            const response = await axios.post(BASE_URL, jobData);
+            const response = await axios.post(`${BASE_URL}/create-job`, jobData);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    applyForJob: async (jobId) => {
+        try {
+            const response = await axios.post(`${BASE_URL}/apply`, { job_id: jobId });
             return response.data;
         } catch (error) {
             throw error;
@@ -35,7 +55,7 @@ export const jobService = {
 
     updateJob: async (id, jobData) => {
         try {
-            const response = await axios.put(`${BASE_URL}/${id}`, jobData); // Correct URL
+            const response = await axios.put(`${BASE_URL}/${id}`, jobData);
             return response.data;
         } catch (error) {
             throw error;
@@ -44,7 +64,7 @@ export const jobService = {
 
     deleteJob: async (id) => {
         try {
-            const response = await axios.delete(`${BASE_URL}/${id}`); // Correct URL
+            const response = await axios.delete(`${BASE_URL}/${id}`);
             return response.data;
         } catch (error) {
             throw error;

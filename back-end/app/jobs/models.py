@@ -25,6 +25,9 @@ class Job:
                 "location": data["location"],
                 "description": data["description"],
                 "posted_by": data["posted_by"],
+                "salary": data.get("salary"), # New field
+                "experience": data.get("experience"), # New field
+                "skills": data.get("skills", []), # New field
                 "salary_min": data.get("salary_min"),
                 "salary_max": data.get("salary_max"),
                 "job_type": data.get("job_type", []),
@@ -36,9 +39,80 @@ class Job:
             }
 
             result = jobs_collection.insert_one(job_data)
-            return str(result.inserted_id)
+            job_data["_id"] = str(result.inserted_id)
+            return job_data # Return the full dict for socket emission
         except Exception as e:
             logger.error(f"Error creating job: {str(e)}")
+            return None
+
+    @staticmethod
+    def upsert_external_jobs(jobs_list, source_name):
+        """
+        Insert jobs into MongoDB, avoiding duplicates based on title, company, and location.
+        Handles both Adzuna and RapidAPI jobs.
+        """
+        try:
+            new_jobs_count = 0
+            for job_data in jobs_list:
+                # Check for existing job with same title, company, and location
+                existing = jobs_collection.find_one({
+                    "title": job_data["title"],
+                    "company": job_data["company"],
+                    "location": job_data["location"]
+                })
+
+                if not existing:
+                    job_data["created_at"] = datetime.utcnow()
+                    job_data["source"] = source_name
+                    jobs_collection.insert_one(job_data)
+                    new_jobs_count += 1
+            
+            return new_jobs_count
+        except Exception as e:
+            logger.error(f"Error upserting {source_name} jobs: {e}")
+            return 0
+
+    @staticmethod
+    def upsert_adzuna_jobs(jobs_list):
+        return Job.upsert_external_jobs(jobs_list, "adzuna")
+
+    @staticmethod
+    def search(query_str):
+        """
+        Search jobs by title, company, or skills (case insensitive).
+        """
+        try:
+            query = {
+                "$or": [
+                    {"title": {"$regex": query_str, "$options": "i"}},
+                    {"company": {"$regex": query_str, "$options": "i"}},
+                    {"skills": {"$regex": query_str, "$options": "i"}}
+                ]
+            }
+            jobs = list(jobs_collection.find(query))
+            for job in jobs:
+                job["_id"] = str(job["_id"])
+            return jobs
+        except Exception as e:
+            logger.error(f"Error searching jobs: {e}")
+            return []
+
+    @staticmethod
+    def apply(user_id, job_id):
+        """
+        Store job application.
+        """
+        try:
+            from app.models.base import job_applications_collection
+            application = {
+                "user_id": user_id,
+                "job_id": job_id,
+                "created_at": datetime.utcnow()
+            }
+            result = job_applications_collection.insert_one(application)
+            return str(result.inserted_id)
+        except Exception as e:
+            logger.error(f"Error applying for job: {e}")
             return None
 
     @staticmethod
