@@ -29,6 +29,7 @@ load_dotenv()
 def create_app(config_name=None):
     """Application factory for creating Flask instances."""
     app = Flask(__name__)
+    app.url_map.strict_slashes = False
 
     # Load configuration
     if config_name is None:
@@ -43,7 +44,7 @@ def create_app(config_name=None):
         app,
         resources={
             r"/*": {
-                "origins": ["http://localhost:3000", "https://nex-um.netlify.app/"],
+                "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "https://nex-um.netlify.app/"],
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,

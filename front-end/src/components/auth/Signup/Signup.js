@@ -383,6 +383,15 @@ const Signup = () => {
 
                     {error && <div className="error-message alert alert-danger">{error}</div>}
 
+                    <Button 
+                        variant="primary" 
+                        type="submit" 
+                        className="w-100 mt-4" 
+                        disabled={loading}
+                        style={{ background: 'linear-gradient(90deg, #00f2fe, #4facfe, #7367f0)', border: 'none', padding: '10px', fontSize: '1.2rem', fontWeight: 'bold' }}
+                    >
+                        {loading ? 'Creating Account...' : 'Create Account'}
+                    </Button>
                 </Form>
                 <div className="login-link mt-3 text-center">
                     Already have an account? <Link to="/signin">Log in</Link>

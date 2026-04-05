@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: 'http://localhost:5001',
+    baseURL: 'http://127.0.0.1:5000',
     headers: {
         'Content-Type': 'application/json'
     },
@@ -24,6 +24,7 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
     (response) => response,
     async (error) => {
+        console.log(error.response || error.message);
         const originalRequest = error.config;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
@@ -35,7 +36,7 @@ instance.interceptors.response.use(
                     throw new Error('No refresh token');
                 }
 
-                const response = await instance.post('/refresh-token', {}, {
+                const response = await instance.post('/refresh', {}, {
                     headers: {
                         'Authorization': `Bearer ${refresh_token}`
                     }

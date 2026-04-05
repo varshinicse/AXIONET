@@ -16,7 +16,7 @@ const Feed = () => {
     const fetchFeeds = async () => {
         try {
             const token = localStorage.getItem("token");
-            const response = await axios.get("http://localhost:5000/feeds", {
+            const response = await axios.get("http://127.0.0.1:5001/feeds", {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -33,7 +33,7 @@ const Feed = () => {
         try {
             const token = localStorage.getItem("token");
             const response = await axios.post(
-                "http://localhost:5000/feeds",
+                "http://127.0.0.1:5001/feeds",
                 { content: newFeed },
                 {
                     headers: {

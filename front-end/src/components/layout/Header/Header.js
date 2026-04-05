@@ -7,6 +7,7 @@ import {
     FaUserPlus, FaEnvelope, FaSignOutAlt, FaUser
 } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
+import logo from '../../../assets/logo.png';
 import './Header.css';
 
 const Header = () => {
@@ -164,8 +165,9 @@ const Header = () => {
         >
             <Container fluid>
                 {/* Brand/Logo - Left aligned with smaller size */}
-                <Navbar.Brand as={Link} to="/" className="navbar-brand">
-                    <img src="/logo.png" alt="Logo" className="logo" />
+                <Navbar.Brand as={Link} to="/" className="navbar-brand axionet-brand">
+                    <img src={logo} alt="AXIONET Logo" className="logo-img" />
+                    <span className="brand-text">AXIONET</span>
                 </Navbar.Brand>
 
                 <Navbar.Toggle aria-controls="main-navbar" />
