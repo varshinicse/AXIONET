@@ -5,6 +5,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ConnectionsProvider } from './contexts/ConnectionsContext'; // Add ConnectionsProvider import
 import 'react-toastify/dist/ReactToastify.css';
 import Header from './components/layout/Header/Header';
+import NavDrawer from './components/layout/NavDrawer';
 import Signin from './components/auth/Signin/Signin';
 import Signup from './components/auth/Signup/Signup';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -45,6 +46,7 @@ const ForgotPassword = React.lazy(() => import('./components/auth/ForgotPassword
 
 function App() {
   const location = useLocation();
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const showHeader = !['/signin', '/signup'].includes(location.pathname);
   const { user } = useAuth();
 
@@ -67,7 +69,8 @@ function App() {
   return (
     <ConnectionsProvider>
       <div className="app min-h-screen bg-background">
-        {showHeader && <Header />}
+        {showHeader && <Header onMenuClick={() => setIsDrawerOpen(true)} />}
+        <NavDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
         <main className={showHeader ? "pt-24 pb-12" : ""}>
           <Routes>
             {/* Public Routes - keep these without Suspense */}

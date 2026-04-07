@@ -121,37 +121,6 @@ const FeedList = () => {
                 {/* Left Sidebar - Nav */}
                 <div className="lg:col-span-3 space-y-8 h-fit lg:sticky lg:top-24">
 
-                    <ModernCard variant="flat" padding="p-3" className="hidden lg:block border-primary/5 shadow-xl">
-                        <nav className="space-y-1.5">
-                            {[
-                                { to: '/', icon: FaHome, label: 'Global Feed', active: true },
-                                { to: '/messages', icon: FaEnvelope, label: 'Direct Messages', badge: '3' },
-                                { to: '/news', icon: FaRss, label: 'Campus News' },
-                                { to: '/jobs', icon: FaBriefcase, label: 'Career Hub' },
-                                { to: '/events', icon: FaCalendarAlt, label: 'Events' },
-                            ].map((item) => (
-                                <Link
-                                    key={item.label}
-                                    to={item.to}
-                                    className={`
-                                        flex items-center gap-3.5 px-4 py-3.5 rounded-xl transition-all duration-normal group
-                                        ${item.active
-                                            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
-                                            : 'text-text-secondary hover:bg-primary/5 hover:text-primary'
-                                        }
-                                    `}
-                                >
-                                    <item.icon className={`text-xl transition-transform duration-normal group-hover:scale-110 ${item.active ? 'text-white' : ''}`} />
-                                    <span className="font-bold tracking-tight">{item.label}</span>
-                                    {item.badge && (
-                                        <span className="ml-auto bg-primary text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </Link>
-                            ))}
-                        </nav>
-                    </ModernCard>
                 </div>
 
                 {/* Main Content - Feed */}
