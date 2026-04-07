@@ -52,10 +52,10 @@ export const AuthProvider = ({ children }) => {
     const login = async (credentials) => {
         try {
             const response = await authService.login(credentials);
-            const { access_token, refresh_token, user } = response.data;
+            const { user } = response.data;
 
-            if (access_token && refresh_token && user) {
-                setTokens(access_token, refresh_token);
+            if (user) {
+                // Tokens are already set in localStorage by authService.login
                 setUser(user);
                 return true;
             }

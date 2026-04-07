@@ -103,8 +103,15 @@ const FeedItem = ({ feed, onDelete, onLike, currentUser, onEdit }) => {
         return feed.isLiked || false;
     };
 
+    // Media handling (Post images)
+    const getMediaSrc = (url) => {
+        if (!url) return null;
+        if (url.startsWith('http')) return url;
+        return `http://127.0.0.1:5001${url}`;
+    };
+
     return (
-        <Card className="feed-item-card">
+        <Card className={`feed-item-card ${feed.type === 'job' ? 'job-post-card' : ''}`}>
             <Card.Body>
                 <div className="feed-header">
                     <div className="feed-author">
@@ -119,7 +126,10 @@ const FeedItem = ({ feed, onDelete, onLike, currentUser, onEdit }) => {
                         </Link>
                         <div className="author-info">
                             <Link to={`/profile/${feed.author?.email}`} className="author-name-link">
-                                <h6 className="author-name">{feed.author?.name || 'Unknown User'}</h6>
+                                <h6 className="author-name">
+                                    {feed.author?.name || 'Unknown User'}
+                                    {feed.type === 'job' && <span className="job-badge ms-2">Hiring</span>}
+                                </h6>
                             </Link>
                             <small className="post-date">{formatDate(feed.timestamp)}</small>
                         </div>
@@ -158,8 +168,27 @@ const FeedItem = ({ feed, onDelete, onLike, currentUser, onEdit }) => {
 
                 <div className="feed-content">
                     <p className="content-text">{feed.content}</p>
+                    {feed.type === 'job' && feed.reference_id && (
+                        <div className="mt-2 mb-3">
+                            <Link to={`/jobs/${feed.reference_id}`} className="btn btn-outline-primary btn-sm">
+                                View Job Details
+                            </Link>
+                        </div>
+                    )}
+                    {feed.image_url && (
+                        <div className="post-image-container mb-3">
+                            <img
+                                src={getMediaSrc(feed.image_url)}
+                                alt="Post media"
+                                className="img-fluid rounded post-image"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                }}
+                            />
+                        </div>
+                    )}
                     {feed.edited && (
-                        <small className="text-muted edit-indicator">
+                        <small className="text-muted edit-indicator d-block mb-2">
                             (Edited {feed.edited_at ? formatDate(feed.edited_at) : ''})
                         </small>
                     )}

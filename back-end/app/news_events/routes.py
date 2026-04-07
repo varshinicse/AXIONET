@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required
 from app.news_events.models import NewsEvent, clear_news_events_cache
+from app.news_events.rsvp_model import RSVP
 from app.auth.models import User
 from app.utils.validators import validate_user_input, validate_file_type
 from app.utils.helpers import save_uploaded_file
@@ -26,6 +27,17 @@ def handle_news_events():
 
         # Get news events
         result = NewsEvent.get_all(page, limit, event_type)
+        
+        # If user is logged in, add RSVP status to each event
+        current_user_email = get_jwt_identity()
+        if current_user_email:
+            user = User.find_by_email(current_user_email)
+            if user:
+                user_id = str(user["_id"])
+                for item in result["items"]:
+                    if item["type"] == "event":
+                        item["rsvp_status"] = RSVP.get_status(user_id, item["_id"])
+        
         return jsonify(result), 200
 
     elif request.method == "POST":
@@ -70,6 +82,11 @@ def handle_news_events():
                     data["event_time"] = json_data.get("event_time")
                     data["location"] = json_data.get("location")
                     data["register_link"] = json_data.get("register_link")
+                    data["category"] = json_data.get("category", "Social")
+                    data["event_type"] = json_data.get("event_type", "In-person")
+                    data["capacity"] = int(json_data.get("capacity", 0))
+                    data["price"] = float(json_data.get("price", 0))
+                    data["attendees_count"] = 0
 
             else:
                 # Handle form data
@@ -98,6 +115,11 @@ def handle_news_events():
                     data["event_time"] = request.form.get("event_time")
                     data["location"] = request.form.get("location")
                     data["register_link"] = request.form.get("register_link")
+                    data["category"] = request.form.get("category", "Social")
+                    data["event_type"] = request.form.get("event_type", "In-person")
+                    data["capacity"] = int(request.form.get("capacity", 0))
+                    data["price"] = float(request.form.get("price", 0))
+                    data["attendees_count"] = 0
 
                 # Handle image upload
                 if "image" in request.files:
@@ -150,6 +172,12 @@ def handle_single_news_event(id):
     if request.method == "GET":
         news_event = NewsEvent.get_by_id(id)
         if news_event:
+            # If user is logged in, add RSVP status
+            current_user_email = get_jwt_identity()
+            if current_user_email and news_event["type"] == "event":
+                user = User.find_by_email(current_user_email)
+                if user:
+                    news_event["rsvp_status"] = RSVP.get_status(str(user["_id"]), id)
             return jsonify(news_event), 200
         else:
             return jsonify({"message": "News event not found"}), 404
@@ -172,11 +200,8 @@ def handle_single_news_event(id):
                 return jsonify({"message": "News/event not found"}), 404
 
             # Check if the user has permission to edit
-            user_role = user.get("role", "").lower()
             user_id = str(user["_id"])
 
-            # Staff can only edit their own posts
-            # Alumni can only edit their own posts
             if user_id != news_event["author_id"]:
                 return (
                     jsonify(
@@ -234,10 +259,7 @@ def handle_single_news_event(id):
             user_id = str(user["_id"])
             author_id = news_event.get("author_id")
 
-            # Staff can delete their own posts or alumni posts
-            # Alumni can only delete their own posts
             if user_role == "staff":
-                # Check if the post is by another staff
                 author = User.find_by_id(author_id)
                 if (
                     author
@@ -285,3 +307,63 @@ def handle_single_news_event(id):
                 ),
                 500,
             )
+
+
+@news_events_bp.route("/<id>/rsvp", methods=["POST", "DELETE", "OPTIONS"])
+@jwt_required()
+def handle_event_rsvp(id):
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    current_user_email = get_jwt_identity()
+    user = User.find_by_email(current_user_email)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    user_id = str(user["_id"])
+    
+    # Get event details to check capacity
+    event = NewsEvent.get_by_id(id)
+    if not event or event["type"] != "event":
+        return jsonify({"message": "Event not found"}), 404
+
+    if request.method == "POST":
+        # Check if already RSVP'd
+        if RSVP.get_status(user_id, id):
+            return jsonify({"message": "Already RSVP'd for this event"}), 400
+            
+        # Check capacity
+        if event.get("capacity", 0) > 0 and event.get("attendees_count", 0) >= event["capacity"]:
+            return jsonify({"message": "Event is at full capacity"}), 400
+            
+        rsvp_id = RSVP.create(user_id, id)
+        if rsvp_id:
+            return jsonify({"message": "Successfully RSVP'd", "id": rsvp_id}), 201
+        else:
+            return jsonify({"message": "Failed to RSVP"}), 500
+            
+    elif request.method == "DELETE":
+        if RSVP.delete(user_id, id):
+            return jsonify({"message": "RSVP cancelled successfully"}), 200
+        else:
+            return jsonify({"message": "RSVP not found"}), 404
+
+
+@news_events_bp.route("/<id>/attendees", methods=["GET"])
+@jwt_required()
+def get_event_attendees(id):
+    current_user_email = get_jwt_identity()
+    user = User.find_by_email(current_user_email)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+        
+    # Only staff or the organizer (if alumni) can see attendee list
+    event = NewsEvent.get_by_id(id)
+    if not event:
+        return jsonify({"message": "Event not found"}), 404
+        
+    if user.get("role", "").lower() != "staff" and str(user["_id"]) != event.get("author_id"):
+        return jsonify({"message": "Permission denied"}), 403
+        
+    attendees = RSVP.get_for_event(id)
+    return jsonify(attendees), 200

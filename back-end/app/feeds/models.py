@@ -8,13 +8,16 @@ logger = logging.getLogger(__name__)
 
 class Feed:
     @staticmethod
-    def create(author_email, content):
+    def create(author_email, content, post_type="post", reference_id=None, image_url=None):
         """
         Create a new feed post.
 
         Args:
             author_email: Email of the author
             content: Feed content
+            post_type: Type of post (post, job)
+            reference_id: Optional ID of a referenced object (e.g. Job ID)
+            image_url: Optional URL of an image associated with the post
 
         Returns:
             str: ID of the created feed
@@ -23,6 +26,9 @@ class Feed:
             feed_data = {
                 "content": content,
                 "author": author_email,
+                "type": post_type,
+                "reference_id": reference_id,
+                "image_url": image_url,
                 "timestamp": datetime.utcnow(),
             }
 
@@ -65,6 +71,9 @@ class Feed:
                     "_id": str(feed["_id"]),
                     "content": feed["content"],
                     "author": author_data,
+                    "type": feed.get("type", "post"),
+                    "reference_id": feed.get("reference_id"),
+                    "image_url": feed.get("image_url"),
                     "timestamp": feed["timestamp"].isoformat(),
                 }
 

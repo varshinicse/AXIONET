@@ -29,11 +29,30 @@ const JobForm = () => {
     };
 
     const [formData, setFormData] = useState(initialFormState);
+    const [image, setImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     const [validated, setValidated] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [loadingJob, setLoadingJob] = useState(isEditMode);
+
+    // Handle image selection
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                setError("Image size should be less than 5MB");
+                return;
+            }
+            setImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     // Handle text input changes
     const handleInputChange = (e) => {
@@ -62,17 +81,24 @@ const JobForm = () => {
         setSuccess(null);
 
         try {
-            // Prepare data for API
-            const jobData = {
-                ...formData,
-                skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(s => s !== '') : []
-            };
+            // Prepare data using FormData for file upload
+            const data = new FormData();
+
+            // Add basic fields
+            Object.keys(formData).forEach(key => {
+                data.append(key, formData[key]);
+            });
+
+            // Add image if selected
+            if (image) {
+                data.append('image', image);
+            }
 
             if (isEditMode) {
-                await jobService.updateJob(id, jobData);
+                await jobService.updateJob(id, data);
                 setSuccess('Job updated successfully');
             } else {
-                await jobService.createJob(jobData);
+                await jobService.createJob(data);
                 setSuccess('Job created successfully');
             }
 
@@ -216,6 +242,34 @@ const JobForm = () => {
                                 placeholder="e.g. React, Node.js, MongoDB"
                             />
                         </Form.Group>
+
+                        <Form.Group className="mb-4">
+                            <Form.Label>Job Banner / Photo (Optional)</Form.Label>
+                            <Form.Control
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                            />
+                            <Form.Text className="text-muted">
+                                Upload a photo or company banner (max 5MB).
+                            </Form.Text>
+                        </Form.Group>
+
+                        {imagePreview && (
+                            <div className="mb-4 border rounded p-2 text-center bg-light">
+                                <p className="small text-muted mb-2">Image Preview</p>
+                                <img
+                                    src={imagePreview}
+                                    alt="Job Preview"
+                                    style={{ maxHeight: '200px', maxWidth: '100%', objectFit: 'contain' }}
+                                />
+                                <div className="mt-2 text-center">
+                                    <Button variant="outline-danger" size="sm" onClick={() => { setImage(null); setImagePreview(null); }}>
+                                        Remove Photo
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
 
                         <Form.Group className="mb-3">
                             <Form.Label>Description *</Form.Label>

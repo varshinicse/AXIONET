@@ -36,4 +36,4 @@ typing_extensions==4.12.2
 tzdata==2025.1
 Werkzeug==2.3.7
 wsproto==1.2.0
-requests
+敲畱獥獴

@@ -9,7 +9,8 @@ import {
     FaUser,
     FaEdit,
     FaTrash,
-    FaExternalLinkAlt
+    FaExternalLinkAlt,
+    FaCheckCircle
 } from 'react-icons/fa';
 import { newsEventsService } from '../../../services/api/news-events';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -244,7 +245,13 @@ const EventList = () => {
                                             <div className="event-card">
                                                 <div className="event-details">
                                                     <div className="d-flex justify-content-between align-items-start">
-                                                        <h4 className="event-title">{event.title}</h4>
+                                                        <h4
+                                                            className="event-title mb-0"
+                                                            style={{ cursor: 'pointer', color: 'var(--primary-color)' }}
+                                                            onClick={() => navigate(`/events/${event._id}`)}
+                                                        >
+                                                            {event.title}
+                                                        </h4>
                                                         <div className="event-actions">
                                                             {canEdit(event) && (
                                                                 <Button
@@ -281,6 +288,13 @@ const EventList = () => {
                                                             </span>
                                                         </div>
 
+                                                        {event.category && (
+                                                            <div className="meta-item">
+                                                                <Badge bg="secondary" className="me-2">{event.category}</Badge>
+                                                                <Badge bg="info">{event.event_type}</Badge>
+                                                            </div>
+                                                        )}
+
                                                         <div className="meta-item">
                                                             <FaMapMarkerAlt className="meta-icon" />
                                                             <span>{event.location || 'Location not specified'}</span>
@@ -291,37 +305,35 @@ const EventList = () => {
                                                             <span>{formattedTime}</span>
                                                         </div>
 
-                                                        {event.register_link && (
+                                                        {event.rsvp_status === 'registered' && (
                                                             <div className="meta-item">
-                                                                <FaExternalLinkAlt className="meta-icon" />
-                                                                <a
-                                                                    href={event.register_link}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="registration-link"
-                                                                >
-                                                                    Register
-                                                                </a>
+                                                                <Badge bg="success"><FaCheckCircle className="me-1" /> Registered</Badge>
                                                             </div>
                                                         )}
                                                     </div>
 
                                                     <p className="event-description">
-                                                        {event.description}
+                                                        {event.description.substring(0, 150)}...
                                                     </p>
 
-                                                    {event.register_link && (
-                                                        <div className="text-end mt-2">
+                                                    <div className="text-end mt-2 d-flex justify-content-end gap-2">
+                                                        <Link
+                                                            to={`/events/${event._id}`}
+                                                            className="btn btn-sm btn-outline-primary"
+                                                        >
+                                                            View Details
+                                                        </Link>
+                                                        {event.register_link && (
                                                             <a
                                                                 href={event.register_link}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="btn btn-sm btn-primary"
                                                             >
-                                                                <FaExternalLinkAlt className="me-1" /> Register Now
+                                                                <FaExternalLinkAlt className="me-1" /> Register External
                                                             </a>
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

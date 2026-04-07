@@ -37,7 +37,9 @@ export const jobService = {
 
     createJob: async (jobData) => {
         try {
-            const response = await axios.post(`${BASE_URL}/create-job`, jobData);
+            const config = (jobData instanceof FormData) ?
+                { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+            const response = await axios.post(`${BASE_URL}/create-job`, jobData, config);
             return response.data;
         } catch (error) {
             throw error;

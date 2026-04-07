@@ -30,7 +30,7 @@ const NewsDetail = () => {
                 if (response && response.data) {
                     setArticle(response.data);
                     // Set page title to article title
-                    document.title = `${response.data.title} | Imperious`;
+                    document.title = `${response.data.title} | AXIONET`;
 
                     // Also fetch some related articles (based on same department)
                     fetchRelatedArticles(response.data);
@@ -49,7 +49,7 @@ const NewsDetail = () => {
 
         // Clean up on unmount
         return () => {
-            document.title = 'Imperious'; // Reset title
+            document.title = 'AXIONET'; // Reset title
         };
     }, [id]);
 

@@ -96,6 +96,13 @@ def get_jobs():
     limit = int(request.args.get("limit", 10))
     return jsonify(Job.get_all(page=page, limit=limit)), 200
 
+import os
+from werkzeug.utils import secure_filename
+from app.feeds.models import Feed
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in current_app.config["ALLOWED_EXTENSIONS"]
+
 @jobs_bp.route("/create-job", methods=["POST"])
 @jwt_required()
 def create_job():
@@ -106,17 +113,57 @@ def create_job():
     if not user or user["role"].lower() != "alumni":
         return jsonify({"message": "Only alumni can post jobs"}), 403
 
-    data = request.get_json()
-    required_fields = ["title", "company", "location", "description", "skills", "salary", "experience"]
+    # Handle both JSON and Multipart data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        # It's form-data (for file uploads)
+        data = request.form.to_dict()
+        
+    required_fields = ["title", "company", "location", "description"]
+    # We'll be more lenient with requirements since we're adding images
     
     valid, error_msg = validate_user_input(data, required_fields=required_fields)
     if not valid:
         return jsonify({"message": error_msg}), 400
 
+    # Process image upload if present
+    image_url = None
+    if "image" in request.files:
+        file = request.files["image"]
+        if file and allowed_file(file.filename):
+            filename = secure_filename(f"job_{user['_id']}_{datetime.utcnow().timestamp()}_{file.filename}")
+            filepath = os.path.join(current_app.config["JOBS_UPLOAD_FOLDER"], filename)
+            file.save(filepath)
+            # Use a path relative to static
+            image_url = f"/static/uploads/jobs/{filename}"
+
     data["posted_by"] = str(user["_id"])
+    data["image_url"] = image_url
+    
+    # Process skills if provided as string
+    if isinstance(data.get("skills"), str):
+        data["skills"] = [s.strip() for s in data["skills"].split(",") if s.strip()]
+
     job = Job.create(data)
 
     if job:
+        # Cross-post to feed
+        feed_content = f"New Job Opening: {job['title']} at {job['company']}\n\n{job['description']}"
+        # Strip HTML if present in description (simple version)
+        import re
+        feed_content = re.sub('<[^<]+?>', '', feed_content)
+        if len(feed_content) > 300:
+            feed_content = feed_content[:297] + "..."
+            
+        Feed.create(
+            author_email=current_user,
+            content=feed_content,
+            post_type="job",
+            reference_id=job["_id"],
+            image_url=image_url
+        )
+        
         socketio.emit("new_job", job, broadcast=True)
         return jsonify({"message": "Job created successfully", "id": job["_id"]}), 201
     

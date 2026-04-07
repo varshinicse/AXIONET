@@ -84,7 +84,31 @@ export const newsEventsService = {
         } catch (error) {
             throw error;
         }
-    }
+    },
+
+    /**
+     * RSVP for an event
+     * 
+     * @param {string} id - Event ID
+     * @returns {Promise} API response
+     */
+    rsvp: (id) => axios.post(`${BASE_URL}/${id}/rsvp`),
+
+    /**
+     * Cancel RSVP for an event
+     * 
+     * @param {string} id - Event ID
+     * @returns {Promise} API response
+     */
+    cancelRsvp: (id) => axios.delete(`${BASE_URL}/${id}/rsvp`),
+
+    /**
+     * Get all attendees for an event
+     * 
+     * @param {string} id - Event ID
+     * @returns {Promise} API response
+     */
+    getAttendees: (id) => axios.get(`${BASE_URL}/${id}/attendees`)
 };
 
 export default newsEventsService;

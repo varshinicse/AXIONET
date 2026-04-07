@@ -15,7 +15,7 @@ def generate_password_hash(password):
     """Generate a secure password hash."""
     if isinstance(password, str):
         password = password.encode("utf-8")
-    return bcrypt.hashpw(password, bcrypt.gensalt())
+    return bcrypt.hashpw(password, bcrypt.gensalt(rounds=10))
 
 
 def check_password_hash(password, hashed):

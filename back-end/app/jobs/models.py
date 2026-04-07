@@ -34,6 +34,7 @@ class Job:
                 "requirements": data.get("requirements", ""),
                 "how_to_apply": data.get("how_to_apply", ""),
                 "apply_link": data.get("apply_link"),
+                "image_url": data.get("image_url"), # New field for image upload
                 "created_at": datetime.utcnow(),
                 "deadline": data.get("deadline"),
             }

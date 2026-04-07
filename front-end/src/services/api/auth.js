@@ -4,7 +4,7 @@ import axios from '../axios';
 export const authService = {
     login: async (credentials) => {
         try {
-            const response = await axios.post('http://127.0.0.1:5000/login', credentials);
+            const response = await axios.post('/login', credentials);
             if (response.data && response.data.access_token) {
                 localStorage.setItem('access_token', response.data.access_token);
                 localStorage.setItem('refresh_token', response.data.refresh_token); // Make sure this matches your backend

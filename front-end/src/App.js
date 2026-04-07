@@ -35,6 +35,7 @@ const MyMentees = React.lazy(() => import('./components/mentorship/MyMentees'));
 const AnalyticsDashboard = React.lazy(() => import('./components/analytics/AnalyticsDashboard'));
 const ProjectDetail = React.lazy(() => import('./components/projects/ProjectDetail/ProjectDetail'));
 const NewsDetail = React.lazy(() => import('./components/news-events/NewsDetail/NewsDetail'));
+const EventDetail = React.lazy(() => import('./components/news-events/EventDetail/EventDetail'));
 
 
 const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword/ResetPassword'));
@@ -125,6 +126,13 @@ function App() {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <NewsDetail />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/events/:id" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <EventDetail />
                 </Suspense>
               </ProtectedRoute>
             } />

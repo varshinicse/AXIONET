@@ -23,27 +23,13 @@ const NewsEventForm = () => {
         eventTime: "",
         location: "",
         registerLink: "",
+        category: "Social",
+        eventType: "In-person",
+        capacity: 0,
+        price: 0,
     });
 
     const [isLoading, setIsLoading] = useState(false);
-
-    useEffect(() => {
-        // Set type from URL parameter if present
-        const searchParams = new URLSearchParams(location.search);
-        const urlType = searchParams.get('type');
-        if (urlType) {
-            setFormData(prevData => ({
-                ...prevData,
-                type: urlType
-            }));
-        }
-
-        // If ID is present, fetch the news/event data for editing
-        if (id) {
-            setIsEditing(true);
-            fetchNewsEvent();
-        }
-    }, [location.search, id, fetchNewsEvent]);
 
     // Fetch news/event data for editing
     const fetchNewsEvent = React.useCallback(async () => {
@@ -63,6 +49,10 @@ const NewsEventForm = () => {
                     eventTime: eventData.event_time || "",
                     location: eventData.location || "",
                     registerLink: eventData.register_link || "",
+                    category: eventData.category || "Social",
+                    eventType: eventData.event_type || "In-person",
+                    capacity: eventData.capacity || 0,
+                    price: eventData.price || 0,
                 });
             }
         } catch (error) {
@@ -72,6 +62,24 @@ const NewsEventForm = () => {
             setIsLoading(false);
         }
     }, [id]);
+
+    useEffect(() => {
+        // Set type from URL parameter if present
+        const searchParams = new URLSearchParams(location.search);
+        const urlType = searchParams.get('type');
+        if (urlType) {
+            setFormData(prevData => ({
+                ...prevData,
+                type: urlType
+            }));
+        }
+
+        // If ID is present, fetch the news/event data for editing
+        if (id) {
+            setIsEditing(true);
+            fetchNewsEvent();
+        }
+    }, [location.search, id, fetchNewsEvent]);
 
     // Check if user has permission to create news/events
     if (!user || !['staff', 'alumni'].includes(user.role?.toLowerCase())) {
@@ -124,6 +132,10 @@ const NewsEventForm = () => {
                     updateData.event_time = formData.eventTime;
                     updateData.location = formData.location;
                     updateData.register_link = formData.registerLink;
+                    updateData.category = formData.category;
+                    updateData.event_type = formData.eventType;
+                    updateData.capacity = formData.capacity;
+                    updateData.price = formData.price;
                 }
 
                 // Send update request
@@ -146,6 +158,10 @@ const NewsEventForm = () => {
                     data.event_time = formData.eventTime;
                     data.location = formData.location;
                     data.register_link = formData.registerLink;
+                    data.category = formData.category;
+                    data.event_type = formData.eventType;
+                    data.capacity = formData.capacity;
+                    data.price = formData.price;
                 }
 
                 const response = await newsEventsService.createNewsEvent(data);
@@ -285,6 +301,65 @@ const NewsEventForm = () => {
                                             Optional: Provide a link where users can register for this event
                                         </Form.Text>
                                     </Form.Group>
+
+                                    <Row>
+                                        <Col md={6}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Category</Form.Label>
+                                                <Form.Select
+                                                    name="category"
+                                                    value={formData.category}
+                                                    onChange={handleInputChange}
+                                                >
+                                                    <option value="Networking">Networking</option>
+                                                    <option value="Career">Career</option>
+                                                    <option value="Social">Social</option>
+                                                    <option value="Academic">Academic</option>
+                                                </Form.Select>
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={6}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Event Type</Form.Label>
+                                                <Form.Select
+                                                    name="eventType"
+                                                    value={formData.eventType}
+                                                    onChange={handleInputChange}
+                                                >
+                                                    <option value="In-person">In-person</option>
+                                                    <option value="Virtual">Virtual</option>
+                                                    <option value="Hybrid">Hybrid</option>
+                                                </Form.Select>
+                                            </Form.Group>
+                                        </Col>
+                                    </Row>
+
+                                    <Row>
+                                        <Col md={6}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Capacity</Form.Label>
+                                                <Form.Control
+                                                    type="number"
+                                                    name="capacity"
+                                                    value={formData.capacity}
+                                                    onChange={handleInputChange}
+                                                    placeholder="0 for unlimited"
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={6}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Price ($)</Form.Label>
+                                                <Form.Control
+                                                    type="number"
+                                                    name="price"
+                                                    value={formData.price}
+                                                    onChange={handleInputChange}
+                                                    placeholder="0 for free"
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                    </Row>
                                 </>
                             )}
 

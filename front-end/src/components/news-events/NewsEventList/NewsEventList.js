@@ -146,7 +146,7 @@ const NewsEventList = ({ type }) => {
                                 <Button
                                     variant="link"
                                     className="p-0 read-more-link"
-                                    onClick={() => navigate(`/news-events/${item._id}`)}
+                                    onClick={() => navigate(`/${item.type === 'news' ? 'news' : 'events'}/${item._id}`)}
                                 >
                                     Read Full Article →
                                 </Button>

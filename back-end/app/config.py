@@ -22,6 +22,9 @@ class Config:
     PROFILE_PHOTOS_FOLDER = os.path.join(
         BASE_DIR, "app", "static", "uploads", "profile_photos"
     )
+    JOBS_UPLOAD_FOLDER = os.path.join(
+        BASE_DIR, "app", "static", "uploads", "jobs"
+    )
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 
     # MONGODB settings

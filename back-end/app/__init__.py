@@ -44,9 +44,9 @@ def create_app(config_name=None):
         app,
         resources={
             r"/*": {
-                "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "https://nex-um.netlify.app/"],
+                "origins": "*",
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                "allow_headers": ["Content-Type", "Authorization"],
+                "allow_headers": ["*"],
                 "supports_credentials": True,
             }
         },
@@ -132,6 +132,7 @@ def create_app(config_name=None):
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.config["NEWS_EVENTS_UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.config["PROFILE_PHOTOS_FOLDER"], exist_ok=True)
+    os.makedirs(app.config.get("JOBS_UPLOAD_FOLDER", os.path.join(app.root_path, "static", "uploads", "jobs")), exist_ok=True)
 
     # Socket.IO event handlers
     @socketio.on("connect")
