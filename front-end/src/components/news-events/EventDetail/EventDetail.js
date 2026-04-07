@@ -1,14 +1,19 @@
+// src/components/news-events/EventDetail/EventDetail.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Container, Row, Col, Badge, Button, Spinner, Card, ListGroup } from 'react-bootstrap';
 import {
     FaCalendarAlt, FaUser, FaClock, FaArrowLeft, FaEdit,
-    FaTrash, FaMapMarkerAlt, FaLink, FaUsers, FaCheckCircle, FaTimesCircle, FaCalendarPlus
+    FaTrash, FaMapMarkerAlt, FaLink, FaUsers, FaCheckCircle,
+    FaTimesCircle, FaCalendarPlus, FaTicketAlt, FaInfoCircle
 } from 'react-icons/fa';
 import { newsEventsService } from '../../../services/api/news-events';
 import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import '../NewsDetail/NewsDetailStyle.css'; // Reuse basic styles
+import LoadingSkeleton from '../../common/LoadingSkeleton';
+import ModernCard from '../../common/ModernCard';
+import ModernButton from '../../common/ModernButton';
+import ModernBadge from '../../common/ModernBadge';
+import Footer from '../../layout/Footer/Footer';
 
 const EventDetail = () => {
     const { id } = useParams();
@@ -27,8 +32,6 @@ const EventDetail = () => {
             if (response && response.data) {
                 setEvent(response.data);
                 document.title = `${response.data.title} | Event Details`;
-
-                // If user is staff or organizer, fetch attendees
                 if (user && (user.role === 'staff' || user._id === response.data.author_id)) {
                     fetchAttendees();
                 }
@@ -72,7 +75,7 @@ const EventDetail = () => {
                 await newsEventsService.rsvp(id);
                 toast.success('Successfully registered for the event!');
             }
-            fetchEvent(); // Refresh event data
+            fetchEvent();
         } catch (error) {
             console.error('RSVP Error:', error);
             toast.error(error.response?.data?.message || 'Failed to update RSVP');
@@ -94,33 +97,21 @@ const EventDetail = () => {
     };
 
     const addToCalendar = () => {
-        // Generate ICS file content
         const eventDate = new Date(event.event_date);
         const startDate = eventDate.toISOString().replace(/-/g, '').split('T')[0];
-
         let startTime = '000000';
-        if (event.event_time) {
-            // Convert "18:00" to "180000"
-            startTime = event.event_time.replace(/:/g, '') + '00';
-        }
-
-        // Add 1 hour to start time for end time (simple approximation)
+        if (event.event_time) startTime = event.event_time.replace(/:/g, '') + '00';
         let endHour = parseInt(startTime.substring(0, 2)) + 1;
         if (endHour > 23) endHour = 23;
         const endTime = endHour.toString().padStart(2, '0') + startTime.substring(2);
 
         const icsContent = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
+            'BEGIN:VCALENDAR', 'VERSION:2.0',
             'PRODID:-//AXIONET//Alumni Event Scheduler//EN',
-            'BEGIN:VEVENT',
-            `SUMMARY:${event.title}`,
+            'BEGIN:VEVENT', `SUMMARY:${event.title}`,
             `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
-            `LOCATION:${event.location}`,
-            `DTSTART:${startDate}T${startTime}`,
-            `DTEND:${startDate}T${endTime}`,
-            'END:VEVENT',
-            'END:VCALENDAR'
+            `LOCATION:${event.location}`, `DTSTART:${startDate}T${startTime}`,
+            `DTEND:${startDate}T${endTime}`, 'END:VEVENT', 'END:VCALENDAR'
         ].join('\r\n');
 
         const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -133,178 +124,247 @@ const EventDetail = () => {
         toast.success("Calendar file (.ics) downloaded!");
     };
 
-    if (loading) return (
-        <Container className="py-5 text-center">
-            <Spinner animation="border" />
-            <p className="mt-3">Loading event...</p>
-        </Container>
-    );
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto space-y-8">
+                    <LoadingSkeleton variant="header" height="200px" />
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-8 space-y-6">
+                            <LoadingSkeleton variant="card" height="400px" />
+                        </div>
+                        <div className="lg:col-span-4 space-y-6">
+                            <LoadingSkeleton variant="card" height="300px" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
-    if (!event) return (
-        <Container className="py-5 text-center">
-            <h3>Event Not Found</h3>
-            <Link to="/events" className="btn btn-primary mt-3">Back to Events</Link>
-        </Container>
-    );
+    if (!event) {
+        return (
+            <div className="min-h-screen pt-24 px-4 flex items-center justify-center">
+                <ModernCard variant="glass" className="max-w-md w-full text-center p-12">
+                    <h2 className="text-3xl font-black text-text-primary mb-4">Event Not Found</h2>
+                    <ModernButton variant="primary" onClick={() => navigate('/events')}>
+                        <FaArrowLeft className="mr-2" /> Back to Events
+                    </ModernButton>
+                </ModernCard>
+            </div>
+        );
+    }
 
     const isOrganizer = user && (user.role === 'staff' || user._id === event.author_id);
     const isFull = event.capacity > 0 && event.attendees_count >= event.capacity;
+    const progress = event.capacity > 0 ? (event.attendees_count / event.capacity) * 100 : 0;
 
     return (
-        <div className="event-detail-page py-4">
-            <Container>
-                <Link to="/events" className="btn btn-link p-0 mb-4 text-decoration-none">
-                    <FaArrowLeft className="me-2" /> Back to Events
-                </Link>
+        <div className="min-h-screen bg-background pt-24 pb-12 animate-in">
+            <div className="max-w-7xl mx-auto px-4">
+                {/* Header Context */}
+                <div className="flex items-center justify-between mb-8">
+                    <Link to="/events" className="inline-flex items-center text-sm font-black uppercase tracking-widest text-primary hover:gap-2 transition-all">
+                        <FaArrowLeft className="mr-2" /> Events Center
+                    </Link>
+                    {isOrganizer && (
+                        <div className="flex gap-2">
+                            <ModernButton variant="ghost" onClick={() => navigate(`/news-events/${id}/edit`)} className="px-4 py-2 bg-white border border-border/50 text-xs font-black uppercase tracking-widest">
+                                <FaEdit className="mr-2" /> Edit
+                            </ModernButton>
+                            <ModernButton variant="ghost" onClick={handleDelete} className="px-4 py-2 bg-white border border-border/50 text-xs font-black uppercase tracking-widest text-error hover:bg-error/5">
+                                <FaTrash className="mr-2" /> Delete
+                            </ModernButton>
+                        </div>
+                    )}
+                </div>
 
-                <Row>
-                    <Col lg={8}>
-                        <Card className="shadow-sm border-0 mb-4">
-                            <Card.Body className="p-4">
-                                <div className="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <Badge bg="primary" className="mb-2 me-2">{event.category}</Badge>
-                                        <Badge bg="info" className="mb-2">{event.event_type}</Badge>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    {/* Main Content */}
+                    <div className="lg:col-span-8 space-y-8">
+                        <ModernCard variant="elevated" padding="p-0" className="overflow-hidden border-none shadow-2xl shadow-primary/5">
+                            {/* Event Hero */}
+                            <div className="relative p-10 md:p-16 bg-white">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-[10rem] -mr-20 -mt-20" />
+                                <div className="relative z-10">
+                                    <div className="flex gap-2 mb-6">
+                                        <ModernBadge variant="primary" size="sm" className="font-black">
+                                            {event.category}
+                                        </ModernBadge>
+                                        <ModernBadge variant="secondary" size="sm" className="font-black">
+                                            {event.event_type}
+                                        </ModernBadge>
                                     </div>
-                                    {isOrganizer && (
-                                        <div className="d-flex gap-2">
-                                            <Button variant="outline-secondary" size="sm" onClick={() => navigate(`/news-events/${id}/edit`)}>
-                                                <FaEdit /> Edit
-                                            </Button>
-                                            <Button variant="outline-danger" size="sm" onClick={handleDelete}>
-                                                <FaTrash /> Delete
-                                            </Button>
+                                    <h1 className="text-4xl md:text-5xl font-black text-text-primary leading-tight tracking-tighter mb-8">
+                                        {event.title}
+                                    </h1>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-8 rounded-3xl bg-neutral-50/80 border border-border/40">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-white shadow-xl shadow-black/5 flex items-center justify-center text-primary border border-border/50">
+                                                <FaCalendarAlt />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 mb-0.5">Date</p>
+                                                <p className="text-sm font-bold text-text-primary">{new Date(event.event_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-
-                                <h1 className="mb-3">{event.title}</h1>
-
-                                <div className="d-flex flex-wrap gap-4 text-muted mb-4">
-                                    <div className="d-flex align-items-center">
-                                        <FaCalendarAlt className="me-2 text-primary" />
-                                        {new Date(event.event_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                    </div>
-                                    {event.event_time && (
-                                        <div className="d-flex align-items-center">
-                                            <FaClock className="me-2 text-primary" />
-                                            {event.event_time}
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-white shadow-xl shadow-black/5 flex items-center justify-center text-primary border border-border/50">
+                                                <FaClock />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 mb-0.5">Time</p>
+                                                <p className="text-sm font-bold text-text-primary">{event.event_time || 'Check Description'}</p>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="d-flex align-items-center">
-                                        <FaMapMarkerAlt className="me-2 text-primary" />
-                                        {event.location}
+                                        <div className="flex items-center gap-4 sm:col-span-2">
+                                            <div className="h-12 w-12 rounded-2xl bg-white shadow-xl shadow-black/5 flex items-center justify-center text-primary border border-border/50">
+                                                <FaMapMarkerAlt />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 mb-0.5">Location</p>
+                                                <p className="text-sm font-bold text-text-primary">{event.location}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <hr />
-
-                                <div className="event-description mb-5">
-                                    <h4 className="mb-3 text-dark">About This Event</h4>
-                                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{event.description}</p>
+                            {/* Event Body */}
+                            <div className="p-10 md:p-16 border-t border-border/40">
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-8 flex items-center gap-3">
+                                    <FaInfoCircle /> About This Event
+                                </h3>
+                                <div className="prose prose-primary max-w-none">
+                                    <p className="text-lg font-medium text-text-primary/80 leading-relaxed whitespace-pre-wrap">
+                                        {event.description}
+                                    </p>
                                 </div>
-
                                 {event.register_link && (
-                                    <div className="mb-4">
-                                        <Button href={event.register_link} target="_blank" variant="outline-primary" className="d-flex align-items-center w-auto">
-                                            <FaLink className="me-2" /> External Registration Link
-                                        </Button>
+                                    <div className="mt-12">
+                                        <ModernButton variant="ghost" href={event.register_link} className="inline-flex items-center px-8 py-4 rounded-2xl border-2 border-primary/10 text-primary font-black uppercase tracking-widest">
+                                            <FaLink className="mr-3" /> Registration Portal
+                                        </ModernButton>
                                     </div>
                                 )}
-                            </Card.Body>
-                        </Card>
+                            </div>
+                        </ModernCard>
 
+                        {/* Attendee Section (Admin only) */}
                         {isOrganizer && attendees.length > 0 && (
-                            <Card className="shadow-sm border-0 mb-4">
-                                <Card.Header className="bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
-                                    <h5 className="mb-0"><FaUsers className="me-2" /> Attendees ({attendees.length})</h5>
-                                    <Button variant="link" size="sm" onClick={() => setShowAttendees(!showAttendees)}>
-                                        {showAttendees ? 'Hide' : 'Show'}
-                                    </Button>
-                                </Card.Header>
+                            <ModernCard variant="glass" padding="p-0" className="overflow-hidden">
+                                <button
+                                    onClick={() => setShowAttendees(!showAttendees)}
+                                    className="w-full flex items-center justify-between p-8 hover:bg-primary/5 transition-colors"
+                                >
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-text-primary flex items-center gap-3">
+                                        <FaUsers className="text-primary" /> Registered Guests ({attendees.length})
+                                    </h3>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest transition-transform ${showAttendees ? 'rotate-180' : ''}`}>
+                                        {showAttendees ? 'Hide' : 'View All'}
+                                    </span>
+                                </button>
                                 {showAttendees && (
-                                    <ListGroup variant="flush">
+                                    <div className="px-8 pb-8 space-y-4 max-h-[400px] overflow-y-auto">
                                         {attendees.map((rsvp, idx) => (
-                                            <ListGroup.Item key={idx} className="py-3">
-                                                <div className="d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <div className="fw-bold">{rsvp.user?.name}</div>
-                                                        <small className="text-muted">{rsvp.user?.role} • {rsvp.user?.dept}</small>
+                                            <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-border/40">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary text-xs">
+                                                        {rsvp.user?.name?.charAt(0)}
                                                     </div>
-                                                    <Badge bg="success" pill>Confirmed</Badge>
+                                                    <div>
+                                                        <p className="text-sm font-black text-text-primary mb-0.5">{rsvp.user?.name}</p>
+                                                        <p className="text-[10px] font-bold text-text-secondary uppercase">{rsvp.user?.role} • {rsvp.user?.dept}</p>
+                                                    </div>
                                                 </div>
-                                            </ListGroup.Item>
+                                                <ModernBadge variant="success" size="sx">Confirmed</ModernBadge>
+                                            </div>
                                         ))}
-                                    </ListGroup>
+                                    </div>
                                 )}
-                            </Card>
+                            </ModernCard>
                         )}
-                    </Col>
+                    </div>
 
-                    <Col lg={4}>
-                        <Card className="shadow-sm border-0 sticky-top" style={{ top: '2rem' }}>
-                            <Card.Body className="p-4">
-                                <div className="price-tag mb-4">
-                                    <h2 className="mb-0">{event.price > 0 ? `$${event.price}` : 'FREE'}</h2>
-                                    <small className="text-muted">per person</small>
+                    {/* Sidebar Action Panel */}
+                    <div className="lg:col-span-4">
+                        <div className="sticky top-24 space-y-6">
+                            <ModernCard variant="elevated" padding="p-8" className="border-none shadow-2xl shadow-primary/10 bg-primary text-white">
+                                <div className="flex justify-between items-end mb-8 border-b border-white/20 pb-6">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">Registration</p>
+                                        <h2 className="text-4xl font-black italic">{event.price > 0 ? `$${event.price}` : 'FREE'}</h2>
+                                    </div>
+                                    <FaTicketAlt className="text-4xl opacity-20 mb-2" />
                                 </div>
 
-                                <div className="event-stats mb-4">
-                                    <div className="d-flex justify-content-between mb-2">
-                                        <span>Capacity</span>
-                                        <span className="fw-bold">{event.capacity > 0 ? event.capacity : 'Unlimited'}</span>
-                                    </div>
-                                    <div className="d-flex justify-content-between">
-                                        <span>Registered</span>
-                                        <span className="fw-bold">{event.attendees_count || 0}</span>
-                                    </div>
-                                    {event.capacity > 0 && (
-                                        <div className="progress mt-2" style={{ height: '8px' }}>
-                                            <div
-                                                className={`progress-bar ${isFull ? 'bg-danger' : 'bg-success'}`}
-                                                style={{ width: `${Math.min((event.attendees_count / event.capacity) * 100, 100)}%` }}
-                                            ></div>
+                                <div className="space-y-6 mb-10">
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-xs font-black uppercase tracking-widest">
+                                            <span>Availability</span>
+                                            <span>{event.attendees_count} / {event.capacity > 0 ? event.capacity : '∞'}</span>
                                         </div>
-                                    )}
+                                        {event.capacity > 0 && (
+                                            <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-1000 ${isFull ? 'bg-secondary' : 'bg-white'}`}
+                                                    style={{ width: `${Math.min(progress, 100)}%` }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <div className="d-grid gap-3">
-                                    <Button
-                                        variant={event.rsvp_status === 'registered' ? "outline-danger" : "primary"}
-                                        size="lg"
+                                <div className="flex flex-col gap-3">
+                                    <ModernButton
+                                        variant="secondary"
                                         onClick={handleRsvp}
                                         disabled={rsvpLoading || (event.rsvp_status !== 'registered' && isFull)}
+                                        className="h-16 rounded-2xl text-text-primary bg-white hover:bg-neutral-100 font-black uppercase tracking-widest text-sm w-full py-0 shadow-xl shadow-black/20"
                                     >
-                                        {rsvpLoading ? <Spinner size="sm" /> : (
+                                        {rsvpLoading ? 'Processing...' : (
                                             event.rsvp_status === 'registered' ? (
-                                                <><FaTimesCircle className="me-2" /> Cancel RSVP</>
+                                                <><FaTimesCircle className="mr-2" /> Cancel Reservation</>
                                             ) : (
-                                                isFull ? 'Event Full' : <><FaCheckCircle className="me-2" /> RSVP Now</>
+                                                isFull ? 'Sold Out' : <><FaCheckCircle className="mr-2" /> Secure My Spot</>
                                             )
                                         )}
-                                    </Button>
-
-                                    <Button variant="outline-secondary" onClick={addToCalendar}>
-                                        <FaCalendarPlus className="me-2" /> Add to Calendar
-                                    </Button>
+                                    </ModernButton>
+                                    <ModernButton
+                                        variant="ghost"
+                                        onClick={addToCalendar}
+                                        className="h-14 rounded-2xl border border-white/20 text-white hover:bg-white/10 font-black uppercase tracking-widest text-xs py-0"
+                                    >
+                                        <FaCalendarPlus className="mr-2" /> Add to iCal
+                                    </ModernButton>
                                 </div>
 
-                                <div className="mt-4 pt-4 border-top">
-                                    <div className="d-flex align-items-center">
-                                        <div className="author-avatar me-3" style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
-                                            <FaUser />
+                                <div className="mt-8 pt-8 border-t border-white/10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center font-black">
+                                            {event.author?.name?.charAt(0)}
                                         </div>
                                         <div>
-                                            <small className="text-muted d-block">Organized by</small>
-                                            <span className="fw-bold">{event.author?.name || 'Unknown'}</span>
+                                            <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Host</p>
+                                            <p className="text-sm font-bold">{event.author?.name || 'Anonymous'}</p>
                                         </div>
                                     </div>
                                 </div>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
-            </Container>
+                            </ModernCard>
+
+                            <ModernCard variant="glass" padding="p-6">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+                                    <FaInfoCircle /> Travel Advisory
+                                </h4>
+                                <p className="text-xs font-bold text-text-secondary leading-relaxed">
+                                    Please ensure you arrive at least 15 minutes before the scheduled time. For online events, the link will be sent to your registered email.
+                                </p>
+                            </ModernCard>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <Footer />
         </div>
     );
 };

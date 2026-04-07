@@ -1,14 +1,17 @@
 // src/components/news-events/NewsList/NewsList.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Badge, Button } from 'react-bootstrap';
-import { FaCalendarAlt, FaUser, FaPlus, FaEdit, FaTrash, FaBookOpen } from 'react-icons/fa';
+import {
+    FaCalendarAlt, FaUser, FaPlus, FaEdit, FaTrash, FaBookOpen,
+    FaArrowRight, FaChartLine, FaStar
+} from 'react-icons/fa';
 import { newsEventsService } from '../../../services/api/news-events';
 import { useAuth } from '../../../contexts/AuthContext';
-import LoadingSpinner from '../../common/LoadingSpinner';
-import Pagination from 'react-bootstrap/Pagination';
+import LoadingSkeleton from '../../common/LoadingSkeleton';
+import ModernCard from '../../common/ModernCard';
+import ModernButton from '../../common/ModernButton';
+import ModernBadge from '../../common/ModernBadge';
 import { toast } from 'react-toastify';
-import './NewsListStyles.css';
 import Footer from '../../layout/Footer/Footer';
 
 const NewsList = () => {
@@ -31,26 +34,20 @@ const NewsList = () => {
             const response = await newsEventsService.getAll(page, 'news');
 
             if (response.data && response.data.items) {
-                // All news for main content
                 setAllNews(response.data.items);
                 setTotalPages(response.data.pages);
 
-                // Sort by created_at for trending (newest first)
                 const sorted = [...response.data.items].sort((a, b) =>
                     new Date(b.created_at) - new Date(a.created_at)
                 );
-
-                // Take first 5 for trending
                 setTrendingNews(sorted.slice(0, 5));
 
-                // Filter recommended news based on user's department if logged in
                 if (user && user.dept) {
                     const deptNews = response.data.items.filter(
                         item => item.author && item.author.dept === user.dept
                     );
                     setRecommendedNews(deptNews.slice(0, 5));
                 } else {
-                    // If no user or no department, just use random 5 news items
                     const shuffled = [...response.data.items].sort(() => 0.5 - Math.random());
                     setRecommendedNews(shuffled.slice(0, 5));
                 }
@@ -65,37 +62,26 @@ const NewsList = () => {
 
     const handlePageChange = (newPage) => {
         setPage(newPage);
-        window.scrollTo(0, 0);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Check if user can edit or delete a news item
     const canEdit = (newsItem) => {
         if (!user) return false;
-
-        // Only the author can edit
         return user._id === newsItem.author_id;
     };
 
     const canDelete = (newsItem) => {
         if (!user) return false;
-
         const userRole = user.role.toLowerCase();
         const authorId = newsItem.author_id;
-
-        // Staff can delete their own news and alumni news
         if (userRole === 'staff') {
             if (user._id === authorId) return true;
-
-            // If the news was created by an alumni, staff can delete it
             const authorRole = newsItem.author?.role?.toLowerCase();
             return authorRole === 'alumni';
         }
-
-        // Alumni can only delete their own news
         if (userRole === 'alumni') {
             return user._id === authorId;
         }
-
         return false;
     };
 
@@ -108,17 +94,9 @@ const NewsList = () => {
             try {
                 setLoading(true);
                 await newsEventsService.delete(newsId);
-
-                // Update all news lists after deletion
-                const updatedAllNews = allNews.filter(item => item._id !== newsId);
-                setAllNews(updatedAllNews);
-
-                const updatedTrendingNews = trendingNews.filter(item => item._id !== newsId);
-                setTrendingNews(updatedTrendingNews);
-
-                const updatedRecommendedNews = recommendedNews.filter(item => item._id !== newsId);
-                setRecommendedNews(updatedRecommendedNews);
-
+                setAllNews(prev => prev.filter(item => item._id !== newsId));
+                setTrendingNews(prev => prev.filter(item => item._id !== newsId));
+                setRecommendedNews(prev => prev.filter(item => item._id !== newsId));
                 toast.success('News deleted successfully');
             } catch (error) {
                 console.error('Error deleting news:', error);
@@ -129,37 +107,12 @@ const NewsList = () => {
         }
     };
 
-    // Navigate to the detailed article view
     const handleReadFullArticle = (newsId) => {
         navigate(`/news/${newsId}`);
     };
 
-    if (loading) {
-        return <LoadingSpinner />;
-    }
-
-    if (!allNews || allNews.length === 0) {
-        return (
-            <Container className="py-5">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h2>News</h2>
-                    {user && ['staff', 'alumni'].includes(user.role?.toLowerCase()) && (
-                        <Link to="/news-events/create?type=news" className="btn btn-primary">
-                            <FaPlus className="me-2" /> Create News
-                        </Link>
-                    )}
-                </div>
-                <div className="alert alert-info text-center p-5">
-                    <h4>No news articles found</h4>
-                    <p>Be the first to create a news article!</p>
-                </div>
-            </Container>
-        );
-    }
-
-    // Function to get appropriate badge color based on department
-    const getDeptBadgeColor = (dept) => {
-        const deptColors = {
+    const getDeptVariant = (dept) => {
+        const variants = {
             'CSE': 'primary',
             'IT': 'info',
             'ECE': 'success',
@@ -167,279 +120,250 @@ const NewsList = () => {
             'MECH': 'danger',
             'CIVIL': 'secondary'
         };
-        return deptColors[dept] || 'dark';
+        return variants[dept] || 'neutral';
     };
 
-    // Function to get appropriate badge color based on role
-    const getRoleBadgeColor = (role) => {
-        if (!role) return 'secondary';
-
+    const getRoleVariant = (role) => {
+        if (!role) return 'neutral';
         switch (role.toLowerCase()) {
-            case 'staff':
-                return 'primary';
-            case 'alumni':
-                return 'success';
-            case 'student':
-                return 'info';
-            default:
-                return 'secondary';
+            case 'staff': return 'primary';
+            case 'alumni': return 'success';
+            case 'student': return 'info';
+            default: return 'neutral';
         }
     };
 
+    if (loading && allNews.length === 0) {
+        return (
+            <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto space-y-8">
+                    <LoadingSkeleton variant="card" height="400px" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[1, 2, 3, 4, 5, 6].map(i => <LoadingSkeleton key={i} variant="card" height="300px" />)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <><div className="news-page">
-            <Container fluid className="py-4">
-                {/* News Header with Create Button */}
-                <Row className="mb-4">
-                    <Col>
-                        <div className="d-flex justify-content-between align-items-center">
-                            <h2 className="news-main-heading">Latest News</h2>
-                            {user && ['staff', 'alumni'].includes(user.role?.toLowerCase()) && (
-                                <Link to="/news-events/create?type=news" className="btn btn-primary">
-                                    <FaPlus className="me-2" /> Create News
-                                </Link>
-                            )}
-                        </div>
-                    </Col>
-                </Row>
+        <div className="min-h-screen bg-background pt-24 pb-12 animate-in">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                    <div>
+                        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-text-primary mb-2">
+                            Global <span className="text-primary italic">Intelligence</span>
+                        </h1>
+                        <p className="text-text-secondary font-medium">Capture the latest pulse of the AXIONET ecosystem.</p>
+                    </div>
+                    {user && ['staff', 'alumni'].includes(user.role?.toLowerCase()) && (
+                        <ModernButton
+                            variant="primary"
+                            onClick={() => navigate('/news-events/create?type=news')}
+                            className="flex items-center gap-2 px-8 py-4 rounded-2xl shadow-xl shadow-primary/20"
+                        >
+                            <FaPlus /> Create Intel
+                        </ModernButton>
+                    )}
+                </div>
 
-                <Row>
-                    {/* Left Column - Trending News */}
-                    <Col lg={3} md={4} className="mb-4">
-                        <div className="trending-news-section">
-                            <h4 className="section-title">
-                                <span>Trending News</span>
-                            </h4>
-                            <div className="trending-news-list">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Sidebar Left - Trending */}
+                    <aside className="lg:col-span-3 space-y-8 order-2 lg:order-1">
+                        <ModernCard padding="p-6" className="border-primary/5 shadow-xl sticky top-24">
+                            <h3 className="font-black text-lg mb-6 tracking-tight flex items-center gap-3">
+                                <FaChartLine className="text-primary" /> Trending Now
+                            </h3>
+                            <div className="space-y-6">
                                 {trendingNews.map((item, index) => (
-                                    <div key={item._id || index} className="trending-news-item">
-                                        <div className="trending-thumbnail placeholder-thumbnail">
-                                            <span>{index + 1}</span>
-                                        </div>
-                                        <div className="trending-content">
-                                            <h6 className="trending-title">{item.title}</h6>
-                                            <div className="trending-meta">
-                                                <small>
-                                                    <FaCalendarAlt className="me-1" />
-                                                    {new Date(item.created_at).toLocaleDateString()}
-                                                </small>
+                                    <div
+                                        key={item._id || index}
+                                        className="group cursor-pointer border-b border-border/50 pb-4 last:border-0 last:pb-0"
+                                        onClick={() => handleReadFullArticle(item._id)}
+                                    >
+                                        <div className="flex gap-4">
+                                            <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/5 flex items-center justify-center text-primary font-black text-sm">
+                                                {String(index + 1).padStart(2, '0')}
                                             </div>
-                                            <Button
-                                                variant="link"
-                                                className="p-0 read-more-link"
-                                                onClick={() => handleReadFullArticle(item._id)}
-                                            >
-                                                Read article →
-                                            </Button>
+                                            <div className="space-y-1">
+                                                <h4 className="text-sm font-black leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                                                    {item.title}
+                                                </h4>
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-text-secondary uppercase tracking-widest opacity-60">
+                                                    <FaCalendarAlt /> {new Date(item.created_at).toLocaleDateString()}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </Col>
+                        </ModernCard>
 
-                    {/* Center Column - Main News Content */}
-                    <Col lg={6} md={8} className="mb-4">
-                        <div className="main-news-section">
-                            {/* Feature the first news item */}
-                            {allNews.length > 0 && (
-                                <div className="featured-news mb-4">
-                                    <Card className="featured-news-card">
-                                        <div className="featured-placeholder">
-                                            <span>Featured News</span>
+                        {/* Recommended News */}
+                        <ModernCard variant="glass" padding="p-6" className="border-primary/10 shadow-none bg-primary/5">
+                            <h3 className="font-black text-sm text-primary mb-6 tracking-widest uppercase flex items-center gap-2">
+                                <FaStar /> Personalized
+                            </h3>
+                            <div className="space-y-4">
+                                {recommendedNews.map((item) => (
+                                    <Link
+                                        key={item._id}
+                                        to={`/news/${item._id}`}
+                                        className="block group"
+                                    >
+                                        <h4 className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors leading-snug line-clamp-2 mb-1">
+                                            {item.title}
+                                        </h4>
+                                        <p className="text-[10px] font-black text-text-secondary uppercase tracking-tighter opacity-50">
+                                            {item.author?.name || 'Unknown Intel'}
+                                        </p>
+                                    </Link>
+                                ))}
+                            </div>
+                        </ModernCard>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <main className="lg:col-span-9 space-y-8 order-1 lg:order-2">
+                        {/* Featured Post */}
+                        {allNews.length > 0 && (
+                            <ModernCard
+                                padding="p-0"
+                                className="group border-primary/5 shadow-2xl overflow-hidden hover:border-primary/20 transition-all"
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-2">
+                                    <div className="h-64 md:h-auto bg-gradient-to-br from-primary via-blue-700 to-blue-500 relative overflow-hidden flex items-center justify-center text-white">
+                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500" />
+                                        <FaBookOpen className="text-7xl opacity-20 transform group-hover:scale-125 transition-transform duration-700" />
+                                        <div className="absolute bottom-6 left-6 flex flex-wrap gap-2">
+                                            {allNews[0].author?.dept && (
+                                                <ModernBadge variant={getDeptVariant(allNews[0].author.dept)} className="backdrop-blur-md bg-white/20 border-white/30 text-white font-black">
+                                                    {allNews[0].author.dept}
+                                                </ModernBadge>
+                                            )}
                                         </div>
-                                        <Card.Body>
-                                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                    </div>
+                                    <div className="p-8 md:p-12 flex flex-col justify-center">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black">
+                                                    {allNews[0].author?.name?.charAt(0) || 'U'}
+                                                </div>
                                                 <div>
-                                                    {allNews[0].author && allNews[0].author.dept && (
-                                                        <Badge bg={getDeptBadgeColor(allNews[0].author.dept)} className="me-2">
-                                                            {allNews[0].author.dept}
-                                                        </Badge>
-                                                    )}
-                                                    {allNews[0].author && allNews[0].author.role && (
-                                                        <Badge bg={getRoleBadgeColor(allNews[0].author.role)}>
-                                                            {allNews[0].author.role}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <div className="news-actions">
-                                                    {canEdit(allNews[0]) && (
-                                                        <Button
-                                                            variant="outline-primary"
-                                                            size="sm"
-                                                            className="me-2"
-                                                            onClick={() => handleEdit(allNews[0]._id)}
-                                                        >
-                                                            <FaEdit />
-                                                        </Button>
-                                                    )}
-                                                    {canDelete(allNews[0]) && (
-                                                        <Button
-                                                            variant="outline-danger"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(allNews[0]._id)}
-                                                        >
-                                                            <FaTrash />
-                                                        </Button>
-                                                    )}
+                                                    <p className="text-sm font-black text-text-primary leading-none mb-1">
+                                                        {allNews[0].author?.name || 'Unknown'}
+                                                    </p>
+                                                    <ModernBadge variant={getRoleVariant(allNews[0].author?.role)} size="sm">
+                                                        {allNews[0].author?.role || 'Guest'}
+                                                    </ModernBadge>
                                                 </div>
                                             </div>
-                                            <Card.Title className="featured-title">{allNews[0].title}</Card.Title>
-                                            <Card.Text className="featured-excerpt">
-                                                {allNews[0].description.substring(0, 150)}
-                                                {allNews[0].description.length > 150 ? '...' : ''}
-                                            </Card.Text>
-                                            <div className="d-flex justify-content-between align-items-center">
-                                                <div className="featured-meta">
-                                                    <span>
-                                                        <FaUser className="me-1" />
-                                                        {allNews[0].author ? allNews[0].author.name : 'Unknown'}
-                                                    </span>
-                                                    <span>
-                                                        <FaCalendarAlt className="me-1" />
-                                                        {new Date(allNews[0].created_at).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                                <Button
-                                                    variant="primary"
-                                                    className="read-full-btn"
-                                                    onClick={() => handleReadFullArticle(allNews[0]._id)}
-                                                >
-                                                    <FaBookOpen className="me-2" /> Read Full Article
-                                                </Button>
+                                            <div className="flex gap-2">
+                                                {canEdit(allNews[0]) && (
+                                                    <ModernButton variant="ghost" size="sm" onClick={() => handleEdit(allNews[0]._id)} className="p-2 hover:bg-primary/5 text-primary">
+                                                        <FaEdit />
+                                                    </ModernButton>
+                                                )}
+                                                {canDelete(allNews[0]) && (
+                                                    <ModernButton variant="ghost" size="sm" onClick={() => handleDelete(allNews[0]._id)} className="p-2 hover:bg-error/5 text-error">
+                                                        <FaTrash />
+                                                    </ModernButton>
+                                                )}
                                             </div>
-                                        </Card.Body>
-                                    </Card>
-                                </div>
-                            )}
-
-                            {/* Other news items in a grid */}
-                            <Row className="news-grid">
-                                {allNews.slice(1).map((item) => (
-                                    <Col md={6} key={item._id} className="mb-4">
-                                        <Card className="news-card h-100">
-                                            <div className="news-card-placeholder">
-                                                <span>News</span>
-                                            </div>
-                                            <Card.Body>
-                                                <div className="d-flex justify-content-between align-items-start mb-2">
-                                                    <div>
-                                                        {item.author && item.author.dept && (
-                                                            <Badge bg={getDeptBadgeColor(item.author.dept)} className="me-1">
-                                                                {item.author.dept}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <div className="news-actions">
-                                                        {canEdit(item) && (
-                                                            <Button
-                                                                variant="outline-primary"
-                                                                size="sm"
-                                                                className="me-1 btn-sm"
-                                                                onClick={() => handleEdit(item._id)}
-                                                            >
-                                                                <FaEdit />
-                                                            </Button>
-                                                        )}
-                                                        {canDelete(item) && (
-                                                            <Button
-                                                                variant="outline-danger"
-                                                                size="sm"
-                                                                className="btn-sm"
-                                                                onClick={() => handleDelete(item._id)}
-                                                            >
-                                                                <FaTrash />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <Card.Title className="news-title">{item.title}</Card.Title>
-                                                <Card.Text className="news-excerpt">
-                                                    {item.description.substring(0, 100)}
-                                                    {item.description.length > 100 ? '...' : ''}
-                                                </Card.Text>
-                                                <div className="d-flex justify-content-between align-items-center">
-                                                    <div className="news-meta d-flex align-items-center">
-                                                        <small>
-                                                            <FaCalendarAlt className="me-1" />
-                                                            {new Date(item.created_at).toLocaleDateString()}
-                                                        </small>
-                                                        <small className="ms-2">
-                                                            <FaUser className="me-1" />
-                                                            {item.author ? item.author.name : 'Unknown'}
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                                <Button
-                                                    variant="outline-primary"
-                                                    size="sm"
-                                                    className="w-100 mt-3"
-                                                    onClick={() => handleReadFullArticle(item._id)}
-                                                >
-                                                    <FaBookOpen className="me-1" /> Read Full Article
-                                                </Button>
-                                            </Card.Body>
-                                        </Card>
-                                    </Col>
-                                ))}
-                            </Row>
-
-                            {/* Pagination */}
-                            {totalPages > 1 && (
-                                <div className="d-flex justify-content-center mt-4">
-                                    <Pagination>
-                                        {Array.from({ length: totalPages }, (_, i) => (
-                                            <Pagination.Item
-                                                key={i + 1}
-                                                active={i + 1 === page}
-                                                onClick={() => handlePageChange(i + 1)}
-                                            >
-                                                {i + 1}
-                                            </Pagination.Item>
-                                        ))}
-                                    </Pagination>
-                                </div>
-                            )}
-                        </div>
-                    </Col>
-
-                    {/* Right Column - Recommended News */}
-                    <Col lg={3} className="d-none d-lg-block mb-4">
-                        <div className="recommended-news-section">
-                            <h4 className="section-title">
-                                <span>Recommended For You</span>
-                            </h4>
-                            <div className="recommended-news-list">
-                                {recommendedNews.map((item, index) => (
-                                    <div key={item._id || index} className="recommended-news-item">
-                                        <div className="recommended-thumbnail placeholder-thumbnail">
-                                            <span>{index + 1}</span>
                                         </div>
-                                        <div className="recommended-content">
-                                            <h6 className="recommended-title">{item.title}</h6>
-                                            <div className="recommended-meta">
-                                                <small>
-                                                    <FaUser className="me-1" />
-                                                    {item.author ? item.author.name : 'Unknown'}
-                                                </small>
-                                            </div>
-                                            <Button
-                                                variant="link"
-                                                className="p-0 read-more-link"
-                                                onClick={() => handleReadFullArticle(item._id)}
-                                            >
-                                                Read article →
-                                            </Button>
-                                        </div>
-
+                                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-text-primary mb-4 leading-tight">
+                                            {allNews[0].title}
+                                        </h2>
+                                        <p className="text-text-secondary font-medium leading-relaxed mb-8 line-clamp-3">
+                                            {allNews[0].description}
+                                        </p>
+                                        <ModernButton
+                                            variant="primary"
+                                            onClick={() => handleReadFullArticle(allNews[0]._id)}
+                                            className="self-start px-8 py-4 flex items-center gap-3 font-black uppercase tracking-widest text-xs"
+                                        >
+                                            Read Full Intel <FaArrowRight />
+                                        </ModernButton>
                                     </div>
+                                </div>
+                            </ModernCard>
+                        )}
+
+                        {/* News Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {allNews.slice(1).map((item) => (
+                                <ModernCard
+                                    key={item._id}
+                                    padding="p-0"
+                                    className="group flex flex-col border-primary/5 hover:border-primary/20 shadow-xl overflow-hidden h-full"
+                                >
+                                    <div className="h-48 bg-gradient-to-tr from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 relative flex items-center justify-center overflow-hidden">
+                                        <FaBookOpen className="text-4xl text-text-secondary opacity-10 group-hover:scale-110 transition-transform duration-500" />
+                                        <div className="absolute top-4 left-4">
+                                            {item.author?.dept && (
+                                                <ModernBadge variant={getDeptVariant(item.author.dept)} className="font-black uppercase tracking-widest text-[10px]">
+                                                    {item.author.dept}
+                                                </ModernBadge>
+                                            )}
+                                        </div>
+                                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {canEdit(item) && (
+                                                <button onClick={(e) => { e.stopPropagation(); handleEdit(item._id); }} className="p-2 bg-white/90 dark:bg-black/90 rounded-lg text-primary shadow-lg hover:scale-110 transition-all">
+                                                    <FaEdit size={12} />
+                                                </button>
+                                            )}
+                                            {canDelete(item) && (
+                                                <button onClick={(e) => { e.stopPropagation(); handleDelete(item._id); }} className="p-2 bg-white/90 dark:bg-black/90 rounded-lg text-error shadow-lg hover:scale-110 transition-all">
+                                                    <FaTrash size={12} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="p-6 flex-1 flex flex-col">
+                                        <div className="flex items-center gap-3 mb-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-60">
+                                            <FaUser className="text-primary" /> {item.author?.name || 'Unknown'}
+                                            <span className="h-1 w-1 bg-border rounded-full" />
+                                            <FaCalendarAlt className="text-primary" /> {new Date(item.created_at).toLocaleDateString()}
+                                        </div>
+                                        <h3 className="text-xl font-black text-text-primary mb-3 leading-tight group-hover:text-primary transition-colors">
+                                            {item.title}
+                                        </h3>
+                                        <p className="text-sm font-medium text-text-secondary line-clamp-2 mb-6 flex-1">
+                                            {item.description}
+                                        </p>
+                                        <ModernButton
+                                            variant="ghost"
+                                            onClick={() => handleReadFullArticle(item._id)}
+                                            className="w-full justify-between items-center px-4 py-3 rounded-xl border-2 border-primary/10 hover:border-primary hover:bg-primary/5 text-primary text-xs font-black uppercase tracking-widest transition-all"
+                                        >
+                                            Analyze Intel <FaArrowRight />
+                                        </ModernButton>
+                                    </div>
+                                </ModernCard>
+                            ))}
+                        </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 pt-12">
+                                {Array.from({ length: totalPages }, (_, i) => (
+                                    <ModernButton
+                                        key={i + 1}
+                                        variant={i + 1 === page ? 'primary' : 'ghost'}
+                                        onClick={() => handlePageChange(i + 1)}
+                                        className={`h-12 w-12 rounded-xl font-black text-sm ${i + 1 === page ? 'shadow-lg shadow-primary/20' : 'hover:bg-primary/5'}`}
+                                    >
+                                        {i + 1}
+                                    </ModernButton>
                                 ))}
                             </div>
-                        </div>
-                    </Col>
-                </Row>
-            </Container>
-        </div><Footer /></>
+                        )}
+                    </main>
+                </div>
+            </div>
+            <Footer />
+        </div>
     );
 };
 

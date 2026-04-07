@@ -1,6 +1,6 @@
 // Keep these imports
 import React, { Suspense, useEffect } from 'react'; // Add Suspense import
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ConnectionsProvider } from './contexts/ConnectionsContext'; // Add ConnectionsProvider import
 import 'react-toastify/dist/ReactToastify.css';
@@ -32,6 +32,7 @@ const JobForm = React.lazy(() => import('./components/jobs/JobForm'));
 const JobDetails = React.lazy(() => import('./components/jobs/JobDetails'));
 const AlumniMentorship = React.lazy(() => import('./components/mentorship/AlumniMentorship'));
 const MyMentees = React.lazy(() => import('./components/mentorship/MyMentees'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const AnalyticsDashboard = React.lazy(() => import('./components/analytics/AnalyticsDashboard'));
 const ProjectDetail = React.lazy(() => import('./components/projects/ProjectDetail/ProjectDetail'));
 const NewsDetail = React.lazy(() => import('./components/news-events/NewsDetail/NewsDetail'));
@@ -40,7 +41,6 @@ const EventDetail = React.lazy(() => import('./components/news-events/EventDetai
 
 const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword/ResetPassword'));
 const ForgotPassword = React.lazy(() => import('./components/auth/ForgotPassword/ForgotPassword'));
-const RoleSimulator = React.lazy(() => import('./pages/RoleSimulator/RoleSimulator'));
 
 
 function App() {
@@ -66,9 +66,9 @@ function App() {
 
   return (
     <ConnectionsProvider>
-      <div className="app">
+      <div className="app min-h-screen bg-background">
         {showHeader && <Header />}
-        <main>
+        <main className={showHeader ? "pt-24 pb-12" : ""}>
           <Routes>
             {/* Public Routes - keep these without Suspense */}
             <Route path="/signin" element={<Signin />} />
@@ -253,13 +253,22 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/role-simulator" element={
+            <Route path="/profile" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <RoleSimulator />
+                  <ProfilePage />
                 </Suspense>
               </ProtectedRoute>
             } />
+
+            <Route path="/profile/:userId" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ProfilePage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
 
             <Route path="/messages" element={
               <ProtectedRoute>
@@ -268,12 +277,9 @@ function App() {
             } />
 
 
-            {/* Default route */}
             <Route path="/" element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <RoleSimulator />
-                </Suspense>
+                <Navigate to="/feeds" replace />
               </ProtectedRoute>
             } />
           </Routes>

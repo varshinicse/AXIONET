@@ -1,44 +1,66 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { connectionService } from '../services/api/connection';
 import { useAuth } from './AuthContext';
+import socketService from '../services/socketService';
+import { toast } from 'react-toastify';
 
 const ConnectionsContext = createContext();
 
 export const ConnectionsProvider = ({ children }) => {
     const { user } = useAuth();
     const [connections, setConnections] = useState([]);
+    const [followers, setFollowers] = useState([]);
+    const [following, setFollowing] = useState([]);
     const [connectionRequests, setConnectionRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch user's connections
+    // Fetch user's connections (mutual)
     const fetchConnections = useCallback(async () => {
         if (!user) return;
-
         try {
             setLoading(true);
             const data = await connectionService.getConnections();
-            setConnections(data);
+            setConnections(data.connections || []);
             setError(null);
         } catch (err) {
             console.error('Error fetching connections:', err);
-            setError('Failed to load connections. Please try again later.');
+            setError('Failed to load connections.');
         } finally {
             setLoading(false);
+        }
+    }, [user]);
+
+    // Fetch followers
+    const fetchFollowers = useCallback(async () => {
+        if (!user) return;
+        try {
+            const data = await connectionService.getFollowers();
+            setFollowers(data || []);
+        } catch (err) {
+            console.error('Error fetching followers:', err);
+        }
+    }, [user]);
+
+    // Fetch following
+    const fetchFollowing = useCallback(async () => {
+        if (!user) return;
+        try {
+            const data = await connectionService.getFollowing();
+            setFollowing(data || []);
+        } catch (err) {
+            console.error('Error fetching following:', err);
         }
     }, [user]);
 
     // Fetch connection requests
     const fetchConnectionRequests = useCallback(async () => {
         if (!user) return;
-
         try {
             const data = await connectionService.getConnectionRequests();
-            setConnectionRequests(data);
-            setError(null);
+            setConnectionRequests(data || []);
         } catch (err) {
             console.error('Error fetching connection requests:', err);
-            setError('Failed to load connection requests. Please try again later.');
         }
     }, [user]);
 
@@ -49,7 +71,6 @@ export const ConnectionsProvider = ({ children }) => {
             return true;
         } catch (err) {
             console.error('Error sending connection request:', err);
-            setError('Failed to send connection request. Please try again later.');
             return false;
         }
     };
@@ -58,16 +79,14 @@ export const ConnectionsProvider = ({ children }) => {
     const respondToConnectionRequest = async (requestId, status) => {
         try {
             await connectionService.respondToRequest(requestId, status);
-            // Update the connection requests list
-            await fetchConnectionRequests();
-            // If accepted, also update connections
-            if (status === 'accepted') {
-                await fetchConnections();
-            }
+            // Refresh counts and lists
+            fetchConnectionRequests();
+            fetchFollowers();
+            fetchFollowing();
+            fetchConnections();
             return true;
         } catch (err) {
             console.error('Error responding to connection request:', err);
-            setError('Failed to respond to connection request. Please try again later.');
             return false;
         }
     };
@@ -76,12 +95,12 @@ export const ConnectionsProvider = ({ children }) => {
     const removeConnection = async (connectionId) => {
         try {
             await connectionService.removeConnection(connectionId);
-            // Update connections after removal
-            await fetchConnections();
+            fetchConnections();
+            fetchFollowers();
+            fetchFollowing();
             return true;
         } catch (err) {
             console.error('Error removing connection:', err);
-            setError('Failed to remove connection. Please try again later.');
             return false;
         }
     };
@@ -92,29 +111,62 @@ export const ConnectionsProvider = ({ children }) => {
             return await connectionService.getConnectionStatus(userId);
         } catch (err) {
             console.error('Error checking connection status:', err);
-            setError('Failed to check connection status. Please try again later.');
             return { status: 'error' };
         }
     };
 
-    // Initialize connections and requests when user is authenticated
+    // Initialize data
     useEffect(() => {
         if (user) {
             fetchConnections();
+            fetchFollowers();
+            fetchFollowing();
             fetchConnectionRequests();
+
+            // Setup Real-time Listeners
+            const handleNewRequest = (data) => {
+                toast.info(`New follow request from ${data.from_user.name}`);
+                fetchConnectionRequests();
+            };
+
+            const handleRequestAccepted = (data) => {
+                toast.success(`${data.by_user.name} accepted your follow request!`);
+                fetchFollowing();
+                fetchConnections();
+            };
+
+            const handleRequestRejected = (data) => {
+                fetchConnectionRequests();
+            };
+
+            socketService.onConnectionRequest(handleNewRequest);
+            socketService.onRequestAccepted(handleRequestAccepted);
+            socketService.onRequestRejected(handleRequestRejected);
+
+            return () => {
+                socketService.offConnectionRequest(handleNewRequest);
+                socketService.offRequestAccepted(handleRequestAccepted);
+                socketService.offRequestRejected(handleRequestRejected);
+            };
         } else {
             setConnections([]);
+            setFollowers([]);
+            setFollowing([]);
             setConnectionRequests([]);
             setLoading(false);
         }
-    }, [user, fetchConnections, fetchConnectionRequests]);
+    }, [user, fetchConnections, fetchFollowers, fetchFollowing, fetchConnectionRequests]);
 
     const value = {
         connections,
+        followers,
+        following,
         connectionRequests,
         loading,
         error,
         fetchConnections,
+        fetchFollowers,
+        fetchFollowing,
         fetchConnectionRequests,
         sendConnectionRequest,
         respondToConnectionRequest,

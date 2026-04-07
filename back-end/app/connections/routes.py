@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.connections.models import Connection
-from app.auth.models import User
 from bson import ObjectId
 from datetime import datetime, timezone
+from app import socketio, online_users
+from app.auth.models import User
+from app.connections.models import Connection
 
 connections_bp = Blueprint('connections', __name__)
 
@@ -22,10 +23,52 @@ def get_user_connections():
         # Get connections
         connections = Connection.get_user_connections(user_id)
         
-        return jsonify(connections), 200
+        # Calculate counts by role for the overview section
+        counts = {
+            "students": sum(1 for c in connections if c["user"]["role"] == "student"),
+            "alumni": sum(1 for c in connections if c["user"]["role"] == "alumni"),
+            "staff": sum(1 for c in connections if c["user"]["role"].lower() in ["staff", "admin"])
+        }
+        
+        return jsonify({
+            "connections": connections,
+            "followers_count": len(Connection.get_user_connections(user_id, type="followers")),
+            "following_count": len(Connection.get_user_connections(user_id, type="following")),
+            **counts
+        }), 200
         
     except Exception as e:
         current_app.logger.error(f"Error getting connections: {str(e)}")
+        return jsonify({"message": "Internal server error"}), 500
+
+@connections_bp.route('/followers', methods=['GET'])
+@jwt_required()
+def get_followers():
+    try:
+        current_user = get_jwt_identity()
+        user = User.find_by_email(current_user)
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        followers = Connection.get_user_connections(str(user["_id"]), type="followers")
+        return jsonify(followers), 200
+    except Exception as e:
+        current_app.logger.error(f"Error getting followers: {str(e)}")
+        return jsonify({"message": "Internal server error"}), 500
+
+@connections_bp.route('/following', methods=['GET'])
+@jwt_required()
+def get_following():
+    try:
+        current_user = get_jwt_identity()
+        user = User.find_by_email(current_user)
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        following = Connection.get_user_connections(str(user["_id"]), type="following")
+        return jsonify(following), 200
+    except Exception as e:
+        current_app.logger.error(f"Error getting following: {str(e)}")
         return jsonify({"message": "Internal server error"}), 500
 
 @connections_bp.route('/user/<user_id>', methods=['GET'])
@@ -51,7 +94,19 @@ def get_specific_user_connections(user_id):
             # Limit the number of connections shown
             connections = connections[:10]
         
-        return jsonify(connections), 200
+        # Calculate counts by role
+        counts = {
+            "students": sum(1 for c in connections if c["user"]["role"] == "student"),
+            "alumni": sum(1 for c in connections if c["user"]["role"] == "alumni"),
+            "staff": sum(1 for c in connections if c["user"]["role"].lower() in ["staff", "admin"])
+        }
+        
+        return jsonify({
+            "connections": connections,
+            "followers_count": len(Connection.get_user_connections(user_id, type="followers")),
+            "following_count": len(Connection.get_user_connections(user_id, type="following")),
+            **counts
+        }), 200
         
     except Exception as e:
         current_app.logger.error(f"Error getting specific user connections: {str(e)}")
@@ -127,6 +182,18 @@ def send_connection_request():
         result = Connection.create_request(current_user_id, to_user_id)
         
         if result["success"]:
+            # Emit socket event to target user
+            target_sid = online_users.get(to_user["email"])
+            if target_sid:
+                socketio.emit('connection_request', {
+                    "request_id": result["request_id"],
+                    "from_user": {
+                        "name": current_user_obj["name"],
+                        "email": current_user_obj["email"],
+                        "photo_url": current_user_obj.get("photo_url", "")
+                    }
+                }, room=target_sid)
+
             return jsonify({
                 "message": "Connection request sent successfully",
                 "request_id": result["request_id"]
@@ -160,6 +227,23 @@ def respond_to_connection_request(request_id):
         result = Connection.respond_to_request(request_id, current_user_id, status)
         
         if result:
+            # Get original request to find the sender
+            from app.models.base import connection_requests_collection
+            conn_req = connection_requests_collection.find_one({"_id": ObjectId(request_id)})
+            
+            if conn_req:
+                from_user = User.find_by_id(conn_req["from_user_id"])
+                if from_user:
+                    target_sid = online_users.get(from_user["email"])
+                    if target_sid:
+                        socketio.emit(f'request_{status}', {
+                            "request_id": request_id,
+                            "by_user": {
+                                "name": current_user_obj["name"],
+                                "email": current_user_obj["email"]
+                            }
+                        }, room=target_sid)
+
             return jsonify({"message": f"Connection request {status}"}), 200
         else:
             return jsonify({"message": "Connection request not found or not directed to you"}), 404

@@ -1,47 +1,40 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-    Card,
-    Container,
-    Row,
-    Col,
-    Spinner,
-    Alert,
-    Tabs,
-    Tab,
-    Button,
-    Badge,
-    ListGroup
-} from 'react-bootstrap';
+    FaBell, FaProjectDiagram, FaUserFriends,
+    FaChalkboardTeacher, FaBriefcase, FaInfoCircle,
+    FaArrowLeft
+} from 'react-icons/fa';
+
 import { useAuth } from '../../contexts/AuthContext';
+import { useConnections } from '../../contexts/ConnectionsContext';
 import { userProfileService } from '../../services/api/userProfile';
 import { mentorshipService } from '../../services/api/mentorship';
 import { projectService } from '../../services/api/projects';
 import { connectionService } from '../../services/api/connection';
 import { jobProfileService } from '../../services/api/jobProfile';
 import avatarService from "../../services/api/avatarService";
-import './Profile.css';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell } from '@fortawesome/free-solid-svg-icons';
 
-// Import our component files
 import ProfileHeader from './ProfileHeader';
 import ProfileOverview from './ProfileOverview';
 import ProfileProjects from './ProfileProjects';
 import ProfileMentorship from './ProfileMentorship';
 import ProfileConnections from './ProfileConnections';
 import ProfileJobExperience from './ProfileJobExperience';
+import ModernCard from '../common/ModernCard';
+import ModernButton from '../common/ModernButton';
+import LoadingSpinner from '../common/LoadingSpinner';
+
 import {
     EditProfileModal,
-    AvatarSelectionModal, // Import the new AvatarSelectionModal
+    AvatarSelectionModal,
     JobProfileModal,
     JobExperienceModal
 } from './modals/ProfileModals';
 
 const Profile = () => {
-    // Get userId from URL params
     const { userId } = useParams();
-
+    const navigate = useNavigate();
     const { user } = useAuth();
 
     // State management
@@ -49,15 +42,22 @@ const Profile = () => {
     const [error, setError] = useState(null);
     const [profileData, setProfileData] = useState(null);
     const [connections, setConnections] = useState({});
-    const [connectionRequests, setConnectionRequests] = useState([]);
     const [projects, setProjects] = useState([]);
     const [mentorshipData, setMentorshipData] = useState([]);
     const [jobProfile, setJobProfile] = useState(null);
-    const [userConnections, setUserConnections] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
     const [isOwnProfile, setIsOwnProfile] = useState(true);
     const [showRequestsDropdown, setShowRequestsDropdown] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
+    const [connectionStats, setConnectionStats] = useState({ followers_count: 0, following_count: 0 });
+
+    const {
+        connections: connectionsList,
+        connectionRequests,
+        respondToConnectionRequest,
+        sendConnectionRequest,
+        checkConnectionStatus: checkStatus
+    } = useConnections();
 
     // Avatar states
     const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -106,71 +106,46 @@ const Profile = () => {
 
     const [selectedExperienceId, setSelectedExperienceId] = useState(null);
 
-    // Fetch connection requests
-    const fetchConnectionRequests = useCallback(async () => {
-        if (!user) return;
+    // Fetch handlers
 
-        try {
-            const requests = await connectionService.getConnectionRequests();
-            setConnectionRequests(requests);
-        } catch (error) {
-            console.error('Error fetching connection requests:', error);
-        }
-    }, [user]);
 
-    // Fetch user connections
-    const fetchUserConnections = useCallback(async (targetUserId = null) => {
-        try {
-            const connections = await userProfileService.getConnections(targetUserId);
-            setUserConnections(connections);
-        } catch (error) {
-            console.error('Error fetching user connections:', error);
-        }
-    }, []);
-
-    // Fetch connection stats
-    const fetchConnections = useCallback(async (targetUserId = null) => {
+    const fetchConnectionsStats = useCallback(async (targetUserId = null) => {
         try {
             const response = await userProfileService.getConnections(targetUserId);
             setConnections(response || {});
+            setConnectionStats({
+                followers_count: response.followers_count || 0,
+                following_count: response.following_count || 0
+            });
         } catch (error) {
             console.error('Error fetching connections:', error);
         }
     }, []);
 
-    // Fetch connection status between current user and viewed profile
     const fetchConnectionStatus = useCallback(async (targetUserId) => {
         if (!user || !targetUserId || user._id === targetUserId) return;
-
         try {
-            const status = await connectionService.getConnectionStatus(targetUserId);
+            const status = await checkStatus(targetUserId);
             setConnectionStatus(status);
         } catch (error) {
             console.error('Error fetching connection status:', error);
         }
-    }, [user]);
+    }, [user, checkStatus]);
 
-    // Fetch user projects
-    // Update in Profile.js - fetchProjects function
     const fetchProjects = useCallback(async (targetUserId = null) => {
         try {
-            // Simply use getProjects for both cases
             const response = await projectService.getProjects();
             setProjects(response || []);
         } catch (error) {
             console.error('Error fetching projects:', error);
         }
-    }, [user]);
+    }, []);
 
-    // Fetch mentorship data based on user role
-    // Update in Profile.js - fetchMentorshipData function
     const fetchMentorshipData = useCallback(async (targetUser = null) => {
         if (!targetUser) return;
-
         try {
             if (targetUser.role === 'alumni') {
                 if (isOwnProfile) {
-                    // Get current user's mentees
                     const response = await mentorshipService.getMentees();
                     setMentorshipData(response || {});
                 }
@@ -181,14 +156,11 @@ const Profile = () => {
         } catch (error) {
             console.error('Error fetching mentorship data:', error);
         }
-    }, [user, isOwnProfile]);
+    }, [isOwnProfile]);
 
-    // Fetch job profile for alumni
     const fetchJobProfile = useCallback(async (targetUserId = null) => {
         if (!targetUserId) return;
-
         try {
-            // If viewing own profile or target is alumni
             const profile = await jobProfileService.getJobProfile(targetUserId);
             setJobProfile(profile);
         } catch (error) {
@@ -196,38 +168,18 @@ const Profile = () => {
         }
     }, []);
 
-    // Function to update the profile data with a new avatar URL
     const updateProfileAvatar = useCallback((avatarUrl) => {
-        setProfileData(prevData => ({
-            ...prevData,
-            photo_url: avatarUrl
-        }));
+        setProfileData(prevData => ({ ...prevData, photo_url: avatarUrl }));
     }, []);
 
-    // Handle avatar selection
     const handleAvatarSelect = (avatarId) => {
         if (!isOwnProfile || !user) return;
-
-        // Get the avatar URL based on selection
-        const avatarUrl = avatarService.getAvatarUrl(
-            avatarId,
-            profileData.role,
-            userGender
-        );
-
-
-        // console.log("Selected avatar ID:", avatarId);
-        // console.log("Generated avatar URL:", avatarUrl);
-        // Update profile with new avatar URL
+        const avatarUrl = avatarService.getAvatarUrl(avatarId, profileData.role, userGender);
         updateProfileAvatar(avatarUrl);
-
-        // Save the selection to localStorage
         avatarService.saveAvatarSelection(user.email, avatarId);
-
         setShowAvatarModal(false);
     };
 
-    // Simplified data fetching in useEffect
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true);
@@ -235,36 +187,27 @@ const Profile = () => {
                 setLoading(false);
                 return;
             }
-
             try {
                 let userData;
-
-
-
-                // Check if we're viewing our own profile or someone else's
                 if (!userId || userId === user._id) {
                     setIsOwnProfile(true);
-                    // Use userProfileService instead of authService
                     userData = await userProfileService.getMyProfile();
                 } else {
                     setIsOwnProfile(false);
                     userData = await userProfileService.getUserProfile(userId);
+                    fetchConnectionStatus(userId);
                 }
-
                 setProfileData(userData);
-                // console.log("Profile data: ", userData);
 
-                // Initialize other data in parallel based on user role
-                const promises = [];
-                promises.push(fetchConnections(userId));
-                promises.push(isOwnProfile ? fetchConnectionRequests() : null);
-                promises.push(fetchUserConnections(userId));
-                promises.push(fetchProjects(userId));
+                const promises = [
+                    fetchConnectionsStats(userId),
+                    fetchProjects(userId)
+                ];
 
-                if (userData.role === 'student') {
+                if (userData.role === 'student' || userData.role === 'alumni') {
                     promises.push(fetchMentorshipData(userData));
-                } else if (userData.role === 'alumni') {
-                    promises.push(fetchMentorshipData(userData));
+                }
+                if (userData.role === 'alumni') {
                     promises.push(fetchJobProfile(userId));
                 }
 
@@ -275,169 +218,105 @@ const Profile = () => {
                 setLoading(false);
             }
         };
+        fetchAllData();
+    }, [user, userId, fetchConnectionsStats, fetchProjects, fetchMentorshipData, fetchJobProfile, isOwnProfile, fetchConnectionStatus]);
 
-        if (user) fetchAllData();
-    }, [user, userId]);
-
-    // Handle form submission for profile editing
     const handleEditSubmit = async (e) => {
         e.preventDefault();
-
-        // Process skills from comma-separated string to array
         const formData = {
             ...editForm,
             skills: editForm.skills ? editForm.skills.split(',').map(skill => skill.trim()) : []
         };
-
         try {
             await userProfileService.updateProfile(formData);
             setShowEditModal(false);
-
-            // Refresh profile data
             const updatedData = await userProfileService.getMyProfile();
-
-            // Keep the avatar URL
             updatedData.photo_url = profileData.photo_url;
-
             setProfileData(updatedData);
         } catch (error) {
-            console.error('Error updating profile:', error);
             setError('Failed to update profile. Please try again.');
         }
     };
 
-    // Handle connection request response
     const handleConnectionResponse = async (requestId, status) => {
         try {
-            await connectionService.respondToRequest(requestId, status);
-            // Refresh connection requests
-            fetchConnectionRequests();
-            // If accepted, also refresh user connections
-            if (status === 'accepted') {
-                fetchUserConnections();
-            }
+            await respondToConnectionRequest(requestId, status);
         } catch (error) {
-            console.error('Error responding to connection request:', error);
             setError('Failed to process connection request. Please try again.');
         }
     };
 
-    // Handle sending a connection request
-    const handleSendConnectionRequest = async (toUserId, action = 'connect') => {
+    const handleSendConnectionRequestLocally = async (toUserId, action = 'connect') => {
         try {
             if (action === 'accept') {
-                // Find the request ID and accept it
-                const request = connectionRequests.find(
-                    req => req.from_user._id === toUserId
-                );
+                const request = connectionRequests.find(req => req.from_user._id === toUserId);
                 if (request) {
-                    await connectionService.respondToRequest(request._id, 'accepted');
-                    fetchConnectionRequests();
-                    fetchUserConnections();
+                    await respondToConnectionRequest(request._id, 'accepted');
                 }
             } else {
-                // Send a new connection request
-                await connectionService.sendConnectionRequest(toUserId);
+                await sendConnectionRequest(toUserId);
                 setConnectionStatus({ status: 'pending_sent' });
             }
         } catch (error) {
-            console.error('Error handling connection request:', error);
             setError('Failed to send connection request. Please try again.');
         }
     };
 
-    // Handle job profile form submission
     const handleJobProfileSubmit = async (e) => {
         e.preventDefault();
-
-        // Process skills from string to array if needed
         const formData = {
             ...jobProfileForm,
             skills: typeof jobProfileForm.skills === 'string'
                 ? jobProfileForm.skills.split(',').map(skill => skill.trim())
                 : jobProfileForm.skills
         };
-
         try {
-            if (jobProfile) {
-                await jobProfileService.updateJobProfile(formData);
-            } else {
-                await jobProfileService.createJobProfile(formData);
-            }
-
+            if (jobProfile) await jobProfileService.updateJobProfile(formData);
+            else await jobProfileService.createJobProfile(formData);
             setShowJobProfileModal(false);
-
-            // Refresh job profile data
             const updatedProfile = await jobProfileService.getJobProfile();
             setJobProfile(updatedProfile);
         } catch (error) {
-            console.error('Error updating job profile:', error);
             setError('Failed to update job profile. Please try again.');
         }
     };
 
-    // Handle job experience form submission
     const handleJobExperienceSubmit = async (e) => {
         e.preventDefault();
-
-        // Process skills from string to array if needed
         const formData = {
             ...jobExperienceForm,
             skills: typeof jobExperienceForm.skills === 'string'
                 ? jobExperienceForm.skills.split(',').map(skill => skill.trim())
                 : jobExperienceForm.skills
         };
-
         try {
-            if (selectedExperienceId) {
-                // Update existing experience
-                await jobProfileService.updateJobExperience(selectedExperienceId, formData);
-            } else {
-                // Add new experience
-                await jobProfileService.addJobExperience(formData);
-            }
-
+            if (selectedExperienceId) await jobProfileService.updateJobExperience(selectedExperienceId, formData);
+            else await jobProfileService.addJobExperience(formData);
             setShowJobExperienceModal(false);
-
-            // Reset form
             setJobExperienceForm({
-                company: '',
-                job_title: '',
-                location: '',
-                start_date: '',
-                end_date: '',
-                current: false,
-                description: '',
-                skills: []
+                company: '', job_title: '', location: '', start_date: '',
+                end_date: '', current: false, description: '', skills: []
             });
             setSelectedExperienceId(null);
-
-            // Refresh job profile data
             const updatedProfile = await jobProfileService.getJobProfile();
             setJobProfile(updatedProfile);
         } catch (error) {
-            console.error('Error updating job experience:', error);
             setError('Failed to update job experience. Please try again.');
         }
     };
 
-    // Handle deleting a job experience
     const handleDeleteJobExperience = async (experienceId) => {
         if (window.confirm('Are you sure you want to delete this experience?')) {
             try {
                 await jobProfileService.deleteJobExperience(experienceId);
-
-                // Refresh job profile data
                 const updatedProfile = await jobProfileService.getJobProfile();
                 setJobProfile(updatedProfile);
             } catch (error) {
-                console.error('Error deleting job experience:', error);
                 setError('Failed to delete job experience. Please try again.');
             }
         }
     };
 
-    // Edit existing job experience
     const handleEditJobExperience = (experience) => {
         setJobExperienceForm({
             company: experience.company || '',
@@ -453,260 +332,252 @@ const Profile = () => {
         setShowJobExperienceModal(true);
     };
 
-    // Helper function to render connection stats
     const renderConnectionStats = () => {
         const userRole = profileData.role?.toLowerCase() || 'student';
-
         return (
-            <Card className="mb-4 connection-stats-card">
-                <Card.Header className="d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">Connections</h5>
+            <ModernCard className="mb-6 overflow-hidden" padding="p-0">
+                <div className="p-4 border-b border-border flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                    <h5 className="font-bold text-text-primary mb-0">Connections Overview</h5>
                     {isOwnProfile && connectionRequests.length > 0 && (
-                        <div className="position-relative">
-                            <Button
-                                variant="link"
-                                className="p-0 text-decoration-none"
+                        <div className="relative">
+                            <button
+                                className="relative p-2 text-text-secondary hover:text-primary transition-colors"
                                 onClick={() => setShowRequestsDropdown(!showRequestsDropdown)}
                             >
-                                <FontAwesomeIcon icon={faBell} />
-                                <Badge bg="danger" pill className="notification-badge">
+                                <FaBell />
+                                <span className="absolute top-0 right-0 h-4 w-4 bg-error text-white text-[10px] flex items-center justify-center rounded-full border border-surface">
                                     {connectionRequests.length}
-                                </Badge>
-                            </Button>
+                                </span>
+                            </button>
                         </div>
                     )}
-                </Card.Header>
-                <Card.Body>
-                    <Row className="text-center">
+                </div>
+                <div className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-center mb-6">
                         {userRole === 'student' && (
                             <>
-                                <Col>
-                                    <h2>{connections.students || 0}</h2>
-                                    <p className="text-muted">Student Connections</p>
-                                </Col>
-                                <Col>
-                                    <h2>{connections.alumni || 0}</h2>
-                                    <p className="text-muted">Alumni Connections</p>
-                                </Col>
+                                <div>
+                                    <p className="text-3xl font-bold text-primary">{connections.students || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Students</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-success">{connections.alumni || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Alumni</p>
+                                </div>
                             </>
                         )}
-
                         {userRole === 'alumni' && (
                             <>
-                                <Col>
-                                    <h2>{connections.total || 0}</h2>
-                                    <p className="text-muted">Total Connections</p>
-                                </Col>
-                                <Col>
-                                    <h2>{connections.students || 0}</h2>
-                                    <p className="text-muted">Student Connections</p>
-                                </Col>
-                                <Col>
-                                    <h2>{mentorshipData.length || 0}</h2>
-                                    <p className="text-muted">Mentees</p>
-                                </Col>
+                                <div>
+                                    <p className="text-3xl font-bold text-primary">{connections.total || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Total</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-success">{connections.students || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Students</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-amber-500">{mentorshipData.length || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Mentees</p>
+                                </div>
                             </>
                         )}
-
                         {(userRole === 'staff' || userRole === 'admin') && (
                             <>
-                                <Col>
-                                    <h2>{connections.departmentStudents || 0}</h2>
-                                    <p className="text-muted">Department Students</p>
-                                </Col>
-                                <Col>
-                                    <h2>{connections.departmentAlumni || 0}</h2>
-                                    <p className="text-muted">Department Alumni</p>
-                                </Col>
+                                <div>
+                                    <p className="text-3xl font-bold text-primary">{connections.departmentStudents || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Dept Students</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold text-success">{connections.departmentAlumni || 0}</p>
+                                    <p className="text-xs text-text-secondary font-medium uppercase tracking-wider">Dept Alumni</p>
+                                </div>
                             </>
                         )}
-                    </Row>
+                    </div>
 
-                    {userConnections.length > 0 && (
-                        <div className="mt-3">
-                            <h6 className="mb-2">Recent Connections</h6>
-                            <ListGroup variant="flush">
-                                {userConnections.slice(0, 3).map((connection, index) => (
-                                    <ListGroup.Item key={index} className="px-0 py-2 border-0">
-                                        <div className="d-flex align-items-center">
-                                            <div className="connection-avatar me-2">
-                                                <img
-                                                    src={connection.user.photo_url || "/img/default.png"}
-                                                    alt={connection.user.name}
-                                                    className="rounded-circle"
-                                                    width="40"
-                                                    height="40"
-                                                />
-                                            </div>
-                                            <div>
-                                                <div className="fw-bold">{connection.user.name}</div>
-                                                <small className="text-muted">{connection.user.role} • {connection.user.dept}</small>
-                                            </div>
+                    {connectionsList.length > 0 && (
+                        <div className="pt-6 border-t border-border">
+                            <h6 className="text-sm font-bold text-text-primary mb-4">Recent Connections</h6>
+                            <div className="space-y-4">
+                                {connectionsList.slice(0, 3).map((connection, index) => (
+                                    <div key={index} className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-xl overflow-hidden border border-border bg-gray-100">
+                                            <img
+                                                src={connection.user.photo_url || "/img/default.png"}
+                                                alt={connection.user.name}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
-                                    </ListGroup.Item>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-text-primary truncate">{connection.user.name}</p>
+                                            <p className="text-xs text-text-secondary truncate">
+                                                {connection.user.role} • {connection.user.dept}
+                                            </p>
+                                        </div>
+                                    </div>
                                 ))}
-                            </ListGroup>
-                            <div className="text-center mt-2">
-                                <Button
-                                    variant="link"
-                                    size="sm"
-                                    className="text-decoration-none"
+                            </div>
+                            <div className="mt-4 text-center">
+                                <button
+                                    className="text-primary text-sm font-bold hover:underline"
                                     onClick={() => setActiveTab('connections')}
                                 >
                                     View All Connections
-                                </Button>
+                                </button>
                             </div>
                         </div>
                     )}
-                </Card.Body>
-            </Card>
+                </div>
+            </ModernCard>
         );
     };
 
-    // Loading and error states
     if (loading) return (
-        <div className="d-flex justify-content-center align-items-center vh-100">
-            <Spinner animation="border" role="status" variant="primary">
-                <span className="visually-hidden">Loading...</span>
-            </Spinner>
+        <div className="flex justify-center items-center min-h-[60vh]">
+            <LoadingSpinner size="lg" />
         </div>
     );
 
     if (error) return (
-        <Container className="py-5">
-            <Alert variant="danger">{error}</Alert>
-        </Container>
+        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+            <div className="bg-error/10 text-error p-6 rounded-3xl border border-error/20 inline-block">
+                <p className="font-bold text-lg mb-2">Error Loading Profile</p>
+                <p>{error}</p>
+                <ModernButton variant="primary" className="mt-4" onClick={() => window.location.reload()}>Retry</ModernButton>
+            </div>
+        </div>
     );
 
     if (!profileData) return (
-        <Container className="py-5">
-            <Alert variant="warning">Profile not found.</Alert>
-        </Container>
+        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+            <div className="bg-amber-50 dark:bg-amber-900/10 text-amber-600 p-8 rounded-3xl border border-amber-200 dark:border-amber-800 inline-block">
+                <FaArrowLeft className="mx-auto mb-4 text-2xl" />
+                <h2 className="text-2xl font-bold mb-2">Profile Not Found</h2>
+                <p className="mb-6">The user profile you are looking for doesn't exist or has been removed.</p>
+                <ModernButton variant="primary" onClick={() => navigate('/feed')}>Back to Feed</ModernButton>
+            </div>
+        </div>
     );
 
-    // Combine user and profile data
     const userRole = profileData.role?.toLowerCase() || 'student';
 
+    const tabs = [
+        { id: 'overview', label: 'Overview', icon: FaInfoCircle },
+        ...(userRole === 'student' ? [{ id: 'projects', label: 'Projects', icon: FaProjectDiagram }] : []),
+        ...(userRole === 'alumni' ? [{ id: 'job-profile', label: 'Job Profile', icon: FaBriefcase }] : []),
+        ...(userRole === 'student' || userRole === 'alumni' ? [{ id: 'mentorship', label: 'Mentorship', icon: FaChalkboardTeacher }] : []),
+        { id: 'connections', label: 'Connections', icon: FaUserFriends }
+    ];
+
     return (
-        <Container fluid className="profile-container py-5">
-            <Row className="justify-content-center">
-                <Col lg={10}>
-                    <Card className="shadow profile-card">
-                        {/* Profile Header */}
-                        <ProfileHeader
-                            profileData={profileData}
-                            isOwnProfile={isOwnProfile}
-                            connectionStatus={connectionStatus}
-                            userRole={user?.role}
-                            onEditClick={() => setShowEditModal(true)}
-                            onPhotoClick={() => setShowAvatarModal(true)} // Open avatar modal instead
-                            onSendConnectionRequest={handleSendConnectionRequest}
-                        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <ModernCard className="mb-0 overflow-hidden" padding="p-0" variant="flat">
+                {/* Profile Header */}
+                <ProfileHeader
+                    profileData={profileData}
+                    isOwnProfile={isOwnProfile}
+                    connectionStatus={connectionStatus}
+                    connectionStats={connectionStats}
+                    userRole={user?.role}
+                    onEditClick={() => setShowEditModal(true)}
+                    onPhotoClick={() => setShowAvatarModal(true)}
+                    onSendConnectionRequest={handleSendConnectionRequestLocally}
+                />
 
-                        {/* Profile Content */}
-                        <Card.Body className="profile-body">
-                            <Tabs
-                                activeKey={activeTab}
-                                onSelect={(k) => setActiveTab(k)}
-                                className="mb-4 profile-tabs"
+                {/* Tab Navigation */}
+                <div className="px-6 md:px-10 border-b border-border bg-gray-50/50 dark:bg-gray-800/50">
+                    <div className="flex overflow-x-auto no-scrollbar gap-8">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 py-4 border-b-2 transition-all font-bold text-sm whitespace-nowrap ${activeTab === tab.id
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                                    }`}
                             >
-                                {/* Overview Tab */}
-                                <Tab eventKey="overview" title="Overview">
-                                    <ProfileOverview
-                                        profileData={profileData}
-                                        connections={connections}
-                                        projects={projects}
-                                        mentorshipData={mentorshipData}
-                                        jobProfile={jobProfile}
-                                        isOwnProfile={isOwnProfile}
-                                        onJobProfileClick={() => setShowJobProfileModal(true)}
-                                        renderConnectionStats={renderConnectionStats}
-                                    />
-                                </Tab>
+                                <tab.icon className="text-lg" />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                                {/* Projects Tab - Only for Students */}
-                                {userRole === 'student' && (
-                                    <Tab eventKey="projects" title="Projects">
-                                        <ProfileProjects
-                                            projects={projects}
-                                            isOwnProfile={isOwnProfile}
-                                        />
-                                    </Tab>
-                                )}
+                {/* Tab Content */}
+                <div className="p-6 md:p-10 bg-surface">
+                    {activeTab === 'overview' && (
+                        <ProfileOverview
+                            profileData={profileData}
+                            connections={connections}
+                            projects={projects}
+                            mentorshipData={mentorshipData}
+                            jobProfile={jobProfile}
+                            isOwnProfile={isOwnProfile}
+                            onJobProfileClick={() => setShowJobProfileModal(true)}
+                            renderConnectionStats={renderConnectionStats}
+                        />
+                    )}
 
-                                {/* Job Profile Tab - Only for Alumni */}
-                                {userRole === 'alumni' && (
-                                    <Tab eventKey="job-profile" title="Job Profile">
-                                        <ProfileJobExperience
-                                            jobProfile={jobProfile}
-                                            isOwnProfile={isOwnProfile}
-                                            onEditJobProfile={() => {
-                                                setJobProfileForm({
-                                                    company: jobProfile.company || '',
-                                                    job_title: jobProfile.job_title || '',
-                                                    location: jobProfile.location || '',
-                                                    start_date: jobProfile.start_date || '',
-                                                    end_date: jobProfile.end_date || '',
-                                                    current: jobProfile.current || false,
-                                                    description: jobProfile.description || '',
-                                                    industry: jobProfile.industry || '',
-                                                    skills: Array.isArray(jobProfile.skills)
-                                                        ? jobProfile.skills.join(', ')
-                                                        : ''
-                                                });
-                                                setShowJobProfileModal(true);
-                                            }}
-                                            onAddJobProfile={() => setShowJobProfileModal(true)}
-                                            onAddJobExperience={() => {
-                                                setJobExperienceForm({
-                                                    company: '',
-                                                    job_title: '',
-                                                    location: '',
-                                                    start_date: '',
-                                                    end_date: '',
-                                                    current: false,
-                                                    description: '',
-                                                    skills: []
-                                                });
-                                                setSelectedExperienceId(null);
-                                                setShowJobExperienceModal(true);
-                                            }}
-                                            onEditJobExperience={handleEditJobExperience}
-                                            onDeleteJobExperience={handleDeleteJobExperience}
-                                        />
-                                    </Tab>
-                                )}
+                    {activeTab === 'projects' && userRole === 'student' && (
+                        <ProfileProjects
+                            projects={projects}
+                            isOwnProfile={isOwnProfile}
+                        />
+                    )}
 
-                                {/* Mentorship Tab - only for students and alumni */}
-                                {(userRole === 'student' || userRole === 'alumni') && (
-                                    <Tab eventKey="mentorship" title="Mentorship">
-                                        <ProfileMentorship
-                                            mentorshipData={mentorshipData}
-                                            userRole={userRole}
-                                            isOwnProfile={isOwnProfile}
-                                        />
-                                    </Tab>
-                                )}
+                    {activeTab === 'job-profile' && userRole === 'alumni' && (
+                        <ProfileJobExperience
+                            jobProfile={jobProfile}
+                            isOwnProfile={isOwnProfile}
+                            onEditJobProfile={() => {
+                                setJobProfileForm({
+                                    company: jobProfile.company || '',
+                                    job_title: jobProfile.job_title || '',
+                                    location: jobProfile.location || '',
+                                    start_date: jobProfile.start_date || '',
+                                    end_date: jobProfile.end_date || '',
+                                    current: jobProfile.current || false,
+                                    description: jobProfile.description || '',
+                                    industry: jobProfile.industry || '',
+                                    skills: Array.isArray(jobProfile.skills) ? jobProfile.skills.join(', ') : ''
+                                });
+                                setShowJobProfileModal(true);
+                            }}
+                            onAddJobProfile={() => setShowJobProfileModal(true)}
+                            onAddJobExperience={() => {
+                                setJobExperienceForm({
+                                    company: '', job_title: '', location: '', start_date: '',
+                                    end_date: '', current: false, description: '', skills: []
+                                });
+                                setSelectedExperienceId(null);
+                                setShowJobExperienceModal(true);
+                            }}
+                            onEditJobExperience={handleEditJobExperience}
+                            onDeleteJobExperience={handleDeleteJobExperience}
+                        />
+                    )}
 
-                                {/* Connections Tab */}
-                                <Tab eventKey="connections" title="Connections">
-                                    <ProfileConnections
-                                        userConnections={userConnections}
-                                        connectionRequests={connectionRequests}
-                                        isOwnProfile={isOwnProfile}
-                                        onConnectionResponse={handleConnectionResponse}
-                                    />
-                                </Tab>
-                            </Tabs>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
+                    {(activeTab === 'mentorship') && (userRole === 'student' || userRole === 'alumni') && (
+                        <ProfileMentorship
+                            mentorshipData={mentorshipData}
+                            userRole={userRole}
+                            isOwnProfile={isOwnProfile}
+                        />
+                    )}
 
-            {/* Modals - Only render these if it's the user's own profile */}
+                    {activeTab === 'connections' && (
+                        <ProfileConnections
+                            userData={profileData}
+                            isOwnProfile={isOwnProfile}
+                        />
+                    )}
+                </div>
+            </ModernCard>
+
+            {/* Modals */}
             {isOwnProfile && (
                 <>
-                    {/* Edit Profile Modal */}
                     <EditProfileModal
                         show={showEditModal}
                         onHide={() => setShowEditModal(false)}
@@ -716,7 +587,6 @@ const Profile = () => {
                         userRole={userRole}
                     />
 
-                    {/* Avatar Selection Modal */}
                     <AvatarSelectionModal
                         show={showAvatarModal}
                         onHide={() => setShowAvatarModal(false)}
@@ -727,32 +597,29 @@ const Profile = () => {
                         onAvatarSelect={handleAvatarSelect}
                     />
 
-                    {/* Job Profile Modal - Only for Alumni */}
                     {userRole === 'alumni' && (
-                        <JobProfileModal
-                            show={showJobProfileModal}
-                            onHide={() => setShowJobProfileModal(false)}
-                            jobProfileForm={jobProfileForm}
-                            setJobProfileForm={setJobProfileForm}
-                            onSubmit={handleJobProfileSubmit}
-                            isEditing={!!jobProfile}
-                        />
-                    )}
-
-                    {/* Job Experience Modal - Only for Alumni */}
-                    {userRole === 'alumni' && (
-                        <JobExperienceModal
-                            show={showJobExperienceModal}
-                            onHide={() => setShowJobExperienceModal(false)}
-                            jobExperienceForm={jobExperienceForm}
-                            setJobExperienceForm={setJobExperienceForm}
-                            onSubmit={handleJobExperienceSubmit}
-                            isEditing={!!selectedExperienceId}
-                        />
+                        <>
+                            <JobProfileModal
+                                show={showJobProfileModal}
+                                onHide={() => setShowJobProfileModal(false)}
+                                jobProfileForm={jobProfileForm}
+                                setJobProfileForm={setJobProfileForm}
+                                onSubmit={handleJobProfileSubmit}
+                                isEditing={!!jobProfile}
+                            />
+                            <JobExperienceModal
+                                show={showJobExperienceModal}
+                                onHide={() => setShowJobExperienceModal(false)}
+                                jobExperienceForm={jobExperienceForm}
+                                setJobExperienceForm={setJobExperienceForm}
+                                onSubmit={handleJobExperienceSubmit}
+                                isEditing={!!selectedExperienceId}
+                            />
+                        </>
                     )}
                 </>
             )}
-        </Container>
+        </div>
     );
 };
 

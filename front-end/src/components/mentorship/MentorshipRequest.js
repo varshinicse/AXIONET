@@ -1,333 +1,221 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Card, Row, Col, Form, Button, ListGroup, Badge, Tabs, Tab } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
-import { projectService } from '../../services/api/projects';
-import { mentorshipService } from '../../services/api/mentorship';
-import LoadingSpinner from '../common/LoadingSpinner';
-import { toast } from 'react-toastify';
-import { FaEnvelope } from 'react-icons/fa';
+import React, { useState } from 'react';
+import {
+    FaUserGraduate, FaHandshake, FaSearch, FaFilter,
+    FaChalkboardTeacher, FaCalendarCheck, FaCommentDots, FaClock
+} from 'react-icons/fa';
+import ModernCard from '../common/ModernCard';
+import ModernButton from '../common/ModernButton';
+import ModernBadge from '../common/ModernBadge';
+import ModernInput from '../common/ModernInput';
 
 const MentorshipRequest = () => {
-    const [projects, setProjects] = useState([]);
-    const [selectedProject, setSelectedProject] = useState('');
-    const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [submitting, setSubmitting] = useState(false);
-    const [existingRequests, setExistingRequests] = useState([]);
-    const [mentors, setMentors] = useState([]);
-    const [activeTab, setActiveTab] = useState('request');
-    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('mentors');
+    const [searchTerm, setSearchTerm] = useState('');
 
+    // Mock data for demonstration
+    const mentors = [
+        { id: 1, name: 'Dr. Sarah Wilson', role: 'Senior AI Researcher at Google', expertise: ['Machine Learning', 'Computer Vision'], availability: 'Mon, Wed', rating: 4.9, students: 24 },
+        { id: 2, name: 'James Chen', role: 'Full Stack Engineer at Meta', expertise: ['React', 'System Design'], availability: 'Weekends', rating: 4.8, students: 15 },
+        { id: 3, name: 'Elena Rodriguez', role: 'Product Manager at Apple', expertise: ['Product Strategy', 'UX/UI'], availability: 'Tue, Thu', rating: 5.0, students: 32 },
+    ];
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                // Fetch user's projects
-                const projectsResponse = await projectService.getProjects();
-                // console.log('Projects response:', projectsResponse);
-
-                // Ensure we have an array of projects
-                const projectsData = Array.isArray(projectsResponse) ? projectsResponse :
-                    (projectsResponse?.data && Array.isArray(projectsResponse.data)) ?
-                        projectsResponse.data : [];
-
-                setProjects(projectsData);
-
-                // Fetch existing mentorship requests
-                const requestsResponse = await mentorshipService.getRequests();
-                // console.log('Requests response:', requestsResponse);
-
-                // Ensure we have an array of requests
-                const requestsData = Array.isArray(requestsResponse) ? requestsResponse :
-                    (requestsResponse?.data && Array.isArray(requestsResponse.data)) ?
-                        requestsResponse.data : [];
-
-                setExistingRequests(requestsData);
-
-                // Fetch available mentors
-                const mentorsResponse = await mentorshipService.getMentors();
-                // console.log('Mentors response:', mentorsResponse);
-
-                // Ensure we have an array of mentors
-                const mentorsData = Array.isArray(mentorsResponse) ? mentorsResponse :
-                    (mentorsResponse?.data && Array.isArray(mentorsResponse.data)) ?
-                        mentorsResponse.data : [];
-
-                setMentors(mentorsData);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                toast.error('Failed to load data');
-                // Set default values
-                setProjects([]);
-                setExistingRequests([]);
-                setMentors([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!selectedProject) {
-            toast.error('Please select a project');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            // const response = await mentorshipService.createRequest({
-            //     project_id: selectedProject,
-            //     message: message.trim() || 'I would like to request mentorship for this project.'
-            // });
-
-            toast.success('Mentorship request submitted successfully');
-
-            // Refresh the requests
-            const requestsResponse = await mentorshipService.getRequests();
-            const requestsData = Array.isArray(requestsResponse) ? requestsResponse :
-                (requestsResponse?.data && Array.isArray(requestsResponse.data)) ?
-                    requestsResponse.data : [];
-            setExistingRequests(requestsData);
-
-            // Reset form
-            setSelectedProject('');
-            setMessage('');
-
-            // Switch to status tab
-            setActiveTab('status');
-        } catch (error) {
-            console.error('Error submitting request:', error);
-            toast.error('Failed to submit request');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'accepted':
-                return <Badge bg="success">Accepted</Badge>;
-            case 'rejected':
-                return <Badge bg="danger">Rejected</Badge>;
-            default:
-                return <Badge bg="warning">Pending</Badge>;
-        }
-    };
-
-    const renderProjectOptions = () => {
-        // Filter out projects that already have pending or accepted requests
-        const pendingOrAcceptedProjects = existingRequests
-            .filter(req => req.status === 'pending' || req.status === 'accepted')
-            .map(req => req.project?._id);
-
-        const availableProjects = projects.filter(project =>
-            !pendingOrAcceptedProjects.includes(project._id));
-
-        if (availableProjects.length === 0) {
-            return (
-                <option disabled value="">
-                    No eligible projects found
-                </option>
-            );
-        }
-
-        return [
-            <option key="select" value="">
-                Select a project
-            </option>,
-            ...availableProjects.map(project => (
-                <option key={project._id} value={project._id}>
-                    {project.title || 'Untitled Project'}
-                </option>
-            ))
-        ];
-    };
-
-    if (loading) {
-        return <LoadingSpinner />;
-    }
+    const requests = [
+        { id: 1, student: 'Alex Johnson', project: 'Portfolio Redesign', type: 'UI/UX Design', status: 'pending', date: '2024-03-24' },
+        { id: 2, student: 'Emma Watson', project: 'E-commerce API', type: 'Backend Dev', status: 'accepted', date: '2024-03-22' },
+    ];
 
     return (
-        <Container className="py-4">
-            <h2 className="mb-4">Seek Mentorship</h2>
+        <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8 animate-in">
+            <div className="max-w-7xl mx-auto">
+                {/* Hero section */}
+                <div className="mb-12 relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-blue-700 to-blue-500 p-8 md:p-12 text-white shadow-2xl">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl animate-pulse" />
+                    <div className="relative z-10 max-w-2xl">
+                        <ModernBadge variant="error" className="bg-white/20 border-white/30 text-white mb-6 backdrop-blur-md uppercase tracking-widest font-black">
+                            Network Growth
+                        </ModernBadge>
+                        <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight">
+                            Elevate your potential with <span className="italic underline decoration-amber-400">Mentorship</span>
+                        </h1>
+                        <p className="text-lg text-white/80 font-medium leading-relaxed mb-8">
+                            Connect with industry leaders, alumni, and peers to bridge the gap between academia and your dream career.
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                            <ModernButton variant="glass" className="bg-white/10 text-white border-white/20 px-8 py-3 font-black uppercase tracking-widest text-xs">
+                                Find a Mentor
+                            </ModernButton>
+                            <ModernButton variant="secondary" className="bg-transparent border-white text-white hover:bg-white hover:text-primary px-8 py-3 font-black uppercase tracking-widest text-xs">
+                                Become a Mentor
+                            </ModernButton>
+                        </div>
+                    </div>
+                </div>
 
-            <Tabs
-                activeKey={activeTab}
-                onSelect={(k) => setActiveTab(k)}
-                className="mb-4"
-            >
-                <Tab eventKey="request" title="Request Mentorship">
-                    <Card className="shadow-sm">
-                        <Card.Body>
-                            <Row>
-                                <Col md={8}>
-                                    <Form onSubmit={handleSubmit}>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label>Select Project</Form.Label>
-                                            <Form.Select
-                                                value={selectedProject}
-                                                onChange={(e) => setSelectedProject(e.target.value)}
-                                                required
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    {/* Left Column - Filters & Stats */}
+                    <aside className="lg:col-span-3 space-y-8">
+                        <ModernCard padding="p-6" className="border-primary/5 shadow-xl">
+                            <h3 className="font-black text-lg mb-6 tracking-tight flex items-center gap-3">
+                                <FaFilter className="text-primary" /> Refine Search
+                            </h3>
+                            <div className="space-y-6">
+                                <ModernInput
+                                    label="Expertise"
+                                    placeholder="e.g. React, UX..."
+                                    icon={FaSearch}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                                <div className="space-y-3">
+                                    <label className="text-sm font-black text-text-secondary uppercase tracking-widest">Availability</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['Weekday', 'Weekend', 'Morning', 'Evening'].map(time => (
+                                            <button
+                                                key={time}
+                                                className="px-3 py-2 rounded-xl text-xs font-black border-2 border-border/50 hover:border-primary hover:text-primary transition-all uppercase tracking-tighter"
                                             >
-                                                {renderProjectOptions()}
-                                            </Form.Select>
-                                            <Form.Text className="text-muted">
-                                                Only projects without existing mentorship requests are shown.
-                                            </Form.Text>
-                                        </Form.Group>
+                                                {time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <ModernButton variant="primary" className="w-full py-4 text-xs font-black uppercase tracking-widest">Apply filters</ModernButton>
+                            </div>
+                        </ModernCard>
 
-                                        <Form.Group className="mb-3">
-                                            <Form.Label>Message to Potential Mentors</Form.Label>
-                                            <Form.Control
-                                                as="textarea"
-                                                rows={3}
-                                                value={message}
-                                                onChange={(e) => setMessage(e.target.value)}
-                                                placeholder="Describe what kind of mentorship you're looking for..."
-                                            />
-                                        </Form.Group>
+                        <ModernCard variant="glass" className="bg-primary/5 border-primary/20 shadow-none">
+                            <h4 className="font-black text-sm text-primary uppercase tracking-widest mb-4">Your Impact</h4>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <p className="text-2xl font-black text-text-primary">08</p>
+                                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-tighter">Sessions</p>
+                                    </div>
+                                    <div className="h-2 w-24 bg-border rounded-full overflow-hidden mb-2">
+                                        <div className="h-full w-2/3 bg-primary rounded-full transition-all duration-1000" />
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <p className="text-2xl font-black text-text-primary">12</p>
+                                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-tighter">Connections</p>
+                                    </div>
+                                    <div className="h-2 w-24 bg-border rounded-full overflow-hidden mb-2">
+                                        <div className="h-full w-1/2 bg-success rounded-full transition-all duration-1000" />
+                                    </div>
+                                </div>
+                            </div>
+                        </ModernCard>
+                    </aside>
 
-                                        <div className="d-grid">
-                                            <Button
-                                                variant="primary"
-                                                type="submit"
-                                                disabled={submitting || !selectedProject}
-                                            >
-                                                {submitting ? 'Submitting...' : 'Submit Request'}
-                                            </Button>
-                                        </div>
-                                    </Form>
-                                </Col>
+                    {/* Main Content - Tabs & List */}
+                    <main className="lg:col-span-9 space-y-8">
+                        <div className="flex bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start inline-flex">
+                            <button
+                                onClick={() => setActiveTab('mentors')}
+                                className={`
+                                    flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-black transition-all uppercase tracking-widest
+                                    ${activeTab === 'mentors'
+                                        ? 'bg-primary text-white shadow-xl scale-105'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                    }
+                                `}
+                            >
+                                <FaChalkboardTeacher /> Elite Mentors
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('requests')}
+                                className={`
+                                    flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-black transition-all uppercase tracking-widest
+                                    ${activeTab === 'requests'
+                                        ? 'bg-primary text-white shadow-xl scale-105'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                    }
+                                `}
+                            >
+                                <FaHandshake /> Active Requests
+                            </button>
+                        </div>
 
-                                <Col md={4}>
-                                    <Card className="h-100">
-                                        <Card.Header className="bg-secondary text-white">
-                                            <h5 className="mb-0">Available Mentors</h5>
-                                        </Card.Header>
-                                        <Card.Body>
-                                            {mentors.length > 0 ? (
-                                                <ListGroup variant="flush">
-                                                    {mentors.map((mentor, index) => (
-                                                        <ListGroup.Item key={mentor._id || `mentor-${index}`} className="d-flex justify-content-between align-items-start">
-                                                            <div>
-                                                                <div className="fw-bold">{mentor.name || 'Unknown'}</div>
-                                                                <div>Department: {mentor.dept || 'Unknown'}</div>
-                                                                {mentor.willingness && mentor.willingness.length > 0 && (
-                                                                    <div className="mt-1">
-                                                                        <small className="text-muted">Willing to help with: </small>
-                                                                        <div className="d-flex gap-1 flex-wrap mt-1">
-                                                                            {mentor.willingness.map((item, idx) => (
-                                                                                <Badge key={idx} bg="info" pill>{item}</Badge>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </ListGroup.Item>
-                                                    ))}
-                                                </ListGroup>
-                                            ) : (
-                                                <p className="text-center py-3 text-muted">No mentors available at this time.</p>
-                                            )}
-                                        </Card.Body>
-                                    </Card>
-                                </Col>
-                            </Row>
-                        </Card.Body>
-                    </Card>
-                </Tab>
-
-                <Tab eventKey="status" title={`Request Status (${existingRequests.length})`}>
-                    <Card className="shadow-sm">
-                        <Card.Body>
-                            {existingRequests.length > 0 ? (
-                                <ListGroup variant="flush">
-                                    {existingRequests.map((request, index) => (
-                                        <ListGroup.Item key={request._id || `request-${index}`}>
-                                            <div className="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <h5>{request.project?.title || 'Unknown Project'}</h5>
-                                                    <p className="text-muted mb-1">
-                                                        Sent: {request.created_at ? new Date(request.created_at).toLocaleDateString() : 'Unknown date'}
-                                                    </p>
-                                                    {request.mentor ? (
-                                                        <div className="mb-1">
-                                                            <p className="mb-1">
-                                                                Mentor: {request.mentor.name || 'Unknown'} ({request.mentor.dept || 'Unknown'})
-                                                            </p>
-                                                            {/* Add message button for accepted requests */}
-                                                            {request.status === 'accepted' && (
-                                                                <Button
-                                                                    variant="outline-primary"
-                                                                    size="sm"
-                                                                    onClick={() => navigate('/messages', {
-                                                                        state: { recipientEmail: request.mentor.email }
-                                                                    })}
-                                                                >
-                                                                    <FaEnvelope className="me-1" /> Message Mentor
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="mb-1">Mentor: Not assigned yet</p>
-                                                    )}
-                                                    <p>{request.message || 'No message'}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {activeTab === 'mentors' ? (
+                                mentors.map(mentor => (
+                                    <ModernCard
+                                        key={mentor.id}
+                                        padding="p-0"
+                                        className="group border-primary/5 hover:border-primary/30 shadow-xl overflow-hidden"
+                                    >
+                                        <div className="p-8">
+                                            <div className="flex items-start justify-between mb-6">
+                                                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-2xl font-black shadow-lg group-hover:scale-110 transition-transform">
+                                                    {mentor.name.charAt(0)}
                                                 </div>
-                                                <div>
-                                                    {getStatusBadge(request.status)}
+                                                <div className="text-right">
+                                                    <div className="flex items-center gap-1 text-amber-400 font-black text-lg">
+                                                        ★ {mentor.rating}
+                                                    </div>
+                                                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mt-1">
+                                                        {mentor.students} Scholars
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </ListGroup.Item>
-                                    ))}
-                                </ListGroup>
+                                            <h4 className="text-xl font-black tracking-tight text-text-primary group-hover:text-primary transition-colors">{mentor.name}</h4>
+                                            <p className="text-sm font-semibold text-text-secondary mt-2 leading-relaxed italic">{mentor.role}</p>
+
+                                            <div className="flex flex-wrap gap-2 mt-6">
+                                                {mentor.expertise.map(skill => (
+                                                    <ModernBadge key={skill} variant="primary" size="sm" className="bg-primary/5 border-primary/10">
+                                                        {skill}
+                                                    </ModernBadge>
+                                                ))}
+                                            </div>
+
+                                            <div className="mt-8 flex items-center gap-3 text-xs font-bold text-text-secondary uppercase tracking-widest">
+                                                <FaCalendarCheck className="text-primary" />
+                                                <span>Available {mentor.availability}</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 bg-gray-50/50 dark:bg-gray-900/40 border-t border-border/50">
+                                            <ModernButton variant="primary" className="w-full py-3.5 text-xs font-black uppercase tracking-widest shadow-none hover:shadow-lg">
+                                                Request Interaction
+                                            </ModernButton>
+                                        </div>
+                                    </ModernCard>
+                                ))
                             ) : (
-                                <p className="text-center py-3 text-muted">You haven't made any mentorship requests yet.</p>
+                                requests.map(req => (
+                                    <ModernCard
+                                        key={req.id}
+                                        className="border-primary/5 shadow-xl"
+                                    >
+                                        <div className="flex items-center justify-between mb-6">
+                                            <ModernBadge
+                                                variant={req.status === 'accepted' ? 'success' : 'warning'}
+                                                size="sm"
+                                                className="uppercase font-black tracking-widest italic"
+                                                dot
+                                            >
+                                                {req.status}
+                                            </ModernBadge>
+                                            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{req.date}</span>
+                                        </div>
+                                        <h4 className="text-xl font-black tracking-tight text-text-primary">{req.project}</h4>
+                                        <p className="text-sm font-semibold text-text-secondary mt-2 mb-6 italic">Student: {req.student}</p>
+
+                                        <div className="flex items-center gap-4 pt-6 border-t border-border/50">
+                                            <ModernButton variant="glass" size="sm" className="flex-1 text-[10px] font-black uppercase tracking-widest">Details</ModernButton>
+                                            <ModernButton variant="ghost" size="sm" className="p-3">
+                                                <FaCommentDots className="text-primary text-xl" />
+                                            </ModernButton>
+                                        </div>
+                                    </ModernCard>
+                                ))
                             )}
-                        </Card.Body>
-                    </Card>
-                </Tab>
-
-                <Tab eventKey="help" title="Mentorship Guidelines">
-                    <Card className="shadow-sm">
-                        <Card.Body>
-                            <h4>How Mentorship Works</h4>
-                            <p>
-                                Our mentorship program connects you with alumni who can provide guidance,
-                                feedback, and support for your projects. Here's how it works:
-                            </p>
-
-                            <h5>Step 1: Select a Project</h5>
-                            <p>
-                                Choose one of your projects that you'd like to receive mentorship for.
-                                Make sure your project has a clear description and goals.
-                            </p>
-
-                            <h5>Step 2: Submit a Request</h5>
-                            <p>
-                                Write a message explaining what kind of mentorship you're looking for.
-                                Be specific about challenges you're facing or areas where you need guidance.
-                            </p>
-
-                            <h5>Step 3: Wait for a Response</h5>
-                            <p>
-                                Alumni mentors will review your request and decide if they can help.
-                                You'll receive a notification when someone accepts your request.
-                            </p>
-
-                            <h5>Step 4: Collaborate</h5>
-                            <p>
-                                Once a mentor accepts your request, you can message them directly to
-                                discuss your project and set up meetings or check-ins.
-                            </p>
-                        </Card.Body>
-                    </Card>
-                </Tab>
-            </Tabs>
-        </Container>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </div>
     );
 };
 

@@ -1,15 +1,19 @@
 // src/components/news-events/NewsDetail/NewsDetail.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Container, Row, Col, Badge, Button, Spinner } from 'react-bootstrap';
 import {
     FaCalendarAlt, FaUser, FaClock, FaArrowLeft, FaEdit,
-    FaTrash, FaShareAlt, FaBookOpen, FaQuoteLeft, FaQuoteRight
+    FaTrash, FaShareAlt, FaBookOpen, FaQuoteLeft, FaQuoteRight,
+    FaArrowRight, FaChevronRight
 } from 'react-icons/fa';
 import { newsEventsService } from '../../../services/api/news-events';
 import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import '../NewsDetail/NewsDetailStyle.css'
+import LoadingSkeleton from '../../common/LoadingSkeleton';
+import ModernCard from '../../common/ModernCard';
+import ModernButton from '../../common/ModernButton';
+import ModernBadge from '../../common/ModernBadge';
+import Footer from '../../layout/Footer/Footer';
 
 const NewsDetail = () => {
     const { id } = useParams();
@@ -29,10 +33,7 @@ const NewsDetail = () => {
 
                 if (response && response.data) {
                     setArticle(response.data);
-                    // Set page title to article title
                     document.title = `${response.data.title} | AXIONET`;
-
-                    // Also fetch some related articles (based on same department)
                     fetchRelatedArticles(response.data);
                 } else {
                     setError('Article not found');
@@ -46,49 +47,30 @@ const NewsDetail = () => {
         };
 
         fetchArticle();
-
-        // Clean up on unmount
-        return () => {
-            document.title = 'AXIONET'; // Reset title
-        };
+        return () => { document.title = 'AXIONET'; };
     }, [id]);
 
-    // Function to fetch related articles based on department or author
     const fetchRelatedArticles = async (currentArticle) => {
         try {
             const response = await newsEventsService.getAll(1, 'news');
-
             if (response.data && response.data.items) {
-                // Filter out the current article
-                const filteredArticles = response.data.items.filter(item => item._id !== currentArticle._id);
-
-                // First try to get articles from the same department
+                const filtered = response.data.items.filter(item => item._id !== currentArticle._id);
                 let related = [];
-                if (currentArticle.author && currentArticle.author.dept) {
-                    related = filteredArticles.filter(
-                        item => item.author && item.author.dept === currentArticle.author.dept
-                    );
+                if (currentArticle.author?.dept) {
+                    related = filtered.filter(item => item.author?.dept === currentArticle.author.dept);
                 }
-
-                // If not enough related articles by department, add some from the same author
-                if (related.length < 3 && currentArticle.author && currentArticle.author._id) {
-                    const authorArticles = filteredArticles.filter(
-                        item => item.author && item.author._id === currentArticle.author._id &&
-                            !related.find(r => r._id === item._id)
+                if (related.length < 3 && currentArticle.author?._id) {
+                    const authorArticles = filtered.filter(
+                        item => item.author?._id === currentArticle.author._id && !related.find(r => r._id === item._id)
                     );
                     related = [...related, ...authorArticles];
                 }
-
-                // If still not enough, add recent articles
                 if (related.length < 3) {
-                    const recentArticles = filteredArticles
+                    const recent = filtered
                         .filter(item => !related.find(r => r._id === item._id))
                         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-                    related = [...related, ...recentArticles];
+                    related = [...related, ...recent];
                 }
-
-                // Take just the first 3
                 setRelatedArticles(related.slice(0, 3));
             }
         } catch (error) {
@@ -96,37 +78,16 @@ const NewsDetail = () => {
         }
     };
 
-    // Check if user can edit or delete the article
-    const canEdit = () => {
-        if (!user || !article) return false;
-        return user._id === article.author_id;
-    };
+    const canEdit = () => user && article && user._id === article.author_id;
 
     const canDelete = () => {
         if (!user || !article) return false;
-
         const userRole = user.role.toLowerCase();
-        const authorId = article.author_id;
-
-        // Staff can delete their own news and alumni news
         if (userRole === 'staff') {
-            if (user._id === authorId) return true;
-
-            // If the article was created by an alumni, staff can delete it
-            const authorRole = article.author?.role?.toLowerCase();
-            return authorRole === 'alumni';
+            if (user._id === article.author_id) return true;
+            return article.author?.role?.toLowerCase() === 'alumni';
         }
-
-        // Alumni can only delete their own news
-        if (userRole === 'alumni') {
-            return user._id === authorId;
-        }
-
-        return false;
-    };
-
-    const handleEdit = () => {
-        navigate(`/news-events/${id}/edit`);
+        return userRole === 'alumni' && user._id === article.author_id;
     };
 
     const handleDelete = async () => {
@@ -151,296 +112,204 @@ const NewsDetail = () => {
                 title: article.title,
                 text: article.description.substring(0, 100) + '...',
                 url: window.location.href,
-            })
-            // .then(() => console.log('Shared successfully'))
-            // .catch((error) => console.log('Error sharing:', error));
+            });
         } else {
-            // Fallback for browsers that don't support navigator.share
-            const tempInput = document.createElement('input');
-            document.body.appendChild(tempInput);
-            tempInput.value = window.location.href;
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
+            navigator.clipboard.writeText(window.location.href);
             toast.success('URL copied to clipboard');
-        }
-    };
-
-    // Format the timestamp
-    const formatDate = (dateString) => {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
-    };
-
-    // Format reading time (approx. 200 words per minute)
-    const calculateReadingTime = (text) => {
-        const words = text.split(/\s+/).length;
-        const minutes = Math.ceil(words / 200);
-        return `${minutes} min read`;
-    };
-
-    // Helper to get badge color based on department
-    const getDeptBadgeColor = (dept) => {
-        const deptColors = {
-            'CSE': 'primary',
-            'IT': 'info',
-            'ECE': 'success',
-            'EEE': 'warning',
-            'MECH': 'danger',
-            'CIVIL': 'secondary'
-        };
-        return deptColors[dept] || 'dark';
-    };
-
-    // Function to get appropriate badge color based on role
-    const getRoleBadgeColor = (role) => {
-        if (!role) return 'secondary';
-
-        switch (role.toLowerCase()) {
-            case 'staff':
-                return 'primary';
-            case 'alumni':
-                return 'success';
-            case 'student':
-                return 'info';
-            default:
-                return 'secondary';
         }
     };
 
     if (loading) {
         return (
-            <Container className="py-5 text-center">
-                <Spinner animation="border" role="status" className="mb-3">
-                    <span className="visually-hidden">Loading...</span>
-                </Spinner>
-                <p>Loading article...</p>
-            </Container>
+            <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8">
+                <div className="max-w-4xl mx-auto space-y-8">
+                    <LoadingSkeleton variant="header" height="200px" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            <LoadingSkeleton variant="card" height="400px" />
+                        </div>
+                        <div className="space-y-6">
+                            <LoadingSkeleton variant="card" height="300px" />
+                        </div>
+                    </div>
+                </div>
+            </div>
         );
     }
 
     if (error || !article) {
         return (
-            <Container className="py-5">
-                <div className="alert alert-danger">
-                    <h4 className="alert-heading">Article Not Found</h4>
-                    <p>{error || 'Unable to load the requested article.'}</p>
-                    <hr />
-                    <div className="d-grid gap-2 d-md-flex justify-content-md-center">
-                        <Link to="/news" className="btn btn-outline-primary">
-                            <FaArrowLeft className="me-2" /> Back to News
-                        </Link>
-                    </div>
-                </div>
-            </Container>
+            <div className="min-h-screen pt-24 px-4 flex items-center justify-center">
+                <ModernCard variant="glass" className="max-w-md w-full text-center p-12">
+                    <h2 className="text-3xl font-black text-text-primary mb-4">Article Not Found</h2>
+                    <p className="text-text-secondary mb-8">{error || 'Unable to load the requested article.'}</p>
+                    <ModernButton variant="primary" onClick={() => navigate('/news')}>
+                        <FaArrowLeft className="mr-2" /> Back to News
+                    </ModernButton>
+                </ModernCard>
+            </div>
         );
     }
 
+    const readingTime = Math.ceil(article.description.split(/\s+/).length / 200);
+
     return (
-        <div className="news-detail-page">
-            {/* Article Header */}
-            <div className="article-header py-4">
-                <Container>
-                    <div className="article-navigation mb-4">
-                        <Link to="/news" className="back-link">
-                            <FaArrowLeft className="me-2" /> Back to News
-                        </Link>
-                    </div>
-
-                    <div className="article-header-content">
-                        {/* Badges for Department & Role */}
-                        <div className="article-badges mb-3">
-                            {article.author && article.author.dept && (
-                                <Badge bg={getDeptBadgeColor(article.author.dept)} className="me-2">
-                                    {article.author.dept}
-                                </Badge>
-                            )}
-                            {article.author && article.author.role && (
-                                <Badge bg={getRoleBadgeColor(article.author.role)}>
-                                    {article.author.role}
-                                </Badge>
-                            )}
-                        </div>
-
-                        {/* Article Title */}
-                        <h1 className="article-title">{article.title}</h1>
-
-                        {/* Article Meta */}
-                        <div className="article-meta">
-                            <div className="author-info d-flex align-items-center">
-                                <div className="author-avatar">
-                                    <div className="author-avatar-placeholder">
-                                        {article.author?.name ? article.author.name.charAt(0).toUpperCase() : 'U'}
-                                    </div>
-                                </div>
-                                <div className="author-details ms-2">
-                                    <p className="author-name mb-0">
-                                        {article.author ? article.author.name : 'Unknown Author'}
-                                    </p>
-                                    <div className="article-date-info d-flex align-items-center">
-                                        <span className="me-3">
-                                            <FaCalendarAlt className="me-1 text-secondary" />
-                                            <small>{formatDate(article.created_at)}</small>
-                                        </span>
-                                        <span>
-                                            <FaClock className="me-1 text-secondary" />
-                                            <small>{calculateReadingTime(article.description)}</small>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Article Actions */}
-                            <div className="article-actions">
-                                <Button
-                                    variant="outline-secondary"
-                                    size="sm"
-                                    className="me-2"
-                                    onClick={handleShare}
-                                >
-                                    <FaShareAlt className="me-1" /> Share
-                                </Button>
-                                {canEdit() && (
-                                    <Button
-                                        variant="outline-primary"
-                                        size="sm"
-                                        className="me-2"
-                                        onClick={handleEdit}
-                                    >
-                                        <FaEdit className="me-1" /> Edit
-                                    </Button>
-                                )}
-                                {canDelete() && (
-                                    <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        onClick={handleDelete}
-                                        disabled={deleteLoading}
-                                    >
-                                        {deleteLoading ? (
-                                            <>
-                                                <Spinner animation="border" size="sm" className="me-1" />
-                                                Deleting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FaTrash className="me-1" /> Delete
-                                            </>
-                                        )}
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </Container>
+        <div className="min-h-screen bg-background pt-24 pb-12 animate-in">
+            {/* Context Navigation */}
+            <div className="max-w-7xl mx-auto px-4 mb-8">
+                <Link to="/news" className="inline-flex items-center text-sm font-black uppercase tracking-widest text-primary hover:gap-2 transition-all">
+                    <FaArrowLeft className="mr-2" /> News Hub
+                </Link>
             </div>
 
-            {/* Article Content */}
-            <Container className="py-4">
-                <Row>
-                    <Col lg={8} className="article-main-content">
-                        <div className="article-featured-image placeholder-image mb-4">
-                            <div className="placeholder-content">
-                                <FaBookOpen className="me-2" /> {article.title}
-                            </div>
-                        </div>
+            {/* Hero Header */}
+            <div className="max-w-7xl mx-auto px-4 mb-16">
+                <div className="relative p-12 md:p-20 rounded-[3rem] overflow-hidden bg-white shadow-2xl shadow-primary/5 border border-primary/5">
+                    <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/5 to-transparent" />
 
-                        <div className="article-content">
-                            {/* First paragraph with quote styling */}
-                            {article.description.split('\n\n')[0] && (
-                                <p className="lead">
-                                    <FaQuoteLeft className="me-2 text-primary opacity-50" size={20} />
-                                    {article.description.split('\n\n')[0]}
-                                    <FaQuoteRight className="ms-2 text-primary opacity-50" size={20} />
-                                </p>
+                    <div className="relative z-10 max-w-4xl">
+                        <div className="flex flex-wrap items-center gap-3 mb-8">
+                            {article.author?.dept && (
+                                <ModernBadge variant="primary" size="sm" className="font-black uppercase tracking-tighter">
+                                    {article.author.dept}
+                                </ModernBadge>
                             )}
-
-                            {/* Format the remaining description with paragraphs */}
-                            {article.description.split('\n\n').slice(1).map((paragraph, index) => (
-                                <p key={index}>
-                                    {paragraph}
-                                </p>
-                            ))}
+                            <ModernBadge variant="neutral" size="sm" className="font-black opacity-60">
+                                {article.author?.role || 'Contributor'}
+                            </ModernBadge>
                         </div>
 
-                        {/* Article footer */}
-                        <div className="article-footer mt-5 pt-4 border-top">
-                            <div className="d-flex justify-content-between align-items-center">
-                                <div className="author-bio">
-                                    <p className="mb-0">
-                                        <strong>About the author:</strong> {article.author?.name || 'Unknown Author'}
-                                        {article.author?.dept && ` from ${article.author.dept} department`}
+                        <h1 className="text-4xl md:text-6xl font-black text-text-primary leading-[1.1] tracking-tighter mb-10">
+                            {article.title}
+                        </h1>
+
+                        <div className="flex flex-wrap items-center justify-between gap-8 pt-10 border-t border-border/40">
+                            <div className="flex items-center gap-4">
+                                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-xl font-black text-primary border border-primary/10 shadow-inner">
+                                    {article.author?.name ? article.author.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-text-primary mb-1">
+                                        {article.author?.name || 'Unknown Author'}
                                     </p>
-                                </div>
-                                <div className="article-share">
-                                    <Button
-                                        variant="outline-secondary"
-                                        size="sm"
-                                        onClick={handleShare}
-                                    >
-                                        <FaShareAlt className="me-1" /> Share this article
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </Col>
-
-                    {/* Sidebar */}
-                    <Col lg={4} className="article-sidebar">
-                        <div className="sidebar-section mb-4">
-                            <h4 className="sidebar-title">Author</h4>
-                            <div className="author-card d-flex align-items-center p-3 bg-light rounded">
-                                <div className="large-author-avatar">
-                                    <div className="author-avatar-placeholder">
-                                        {article.author?.name ? article.author.name.charAt(0).toUpperCase() : 'U'}
+                                    <div className="flex items-center gap-4 text-xs font-bold text-text-secondary">
+                                        <span className="flex items-center gap-1.5"><FaCalendarAlt className="opacity-40" /> {new Date(article.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                        <span className="flex items-center gap-1.5"><FaClock className="opacity-40" /> {readingTime} min read</span>
                                     </div>
                                 </div>
-                                <div className="ms-3">
-                                    <h5 className="mb-1">{article.author ? article.author.name : 'Unknown Author'}</h5>
-                                    {article.author?.dept && (
-                                        <p className="mb-0 text-muted">{article.author.dept} Department</p>
-                                    )}
-                                    {article.author?.role && (
-                                        <Badge bg={getRoleBadgeColor(article.author.role)} className="mt-1">
-                                            {article.author.role}
-                                        </Badge>
-                                    )}
-                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <ModernButton variant="ghost" onClick={handleShare} className="h-12 w-12 rounded-xl flex items-center justify-center bg-background border border-border/50 hover:bg-primary/5 text-primary">
+                                    <FaShareAlt />
+                                </ModernButton>
+                                {canEdit() && (
+                                    <ModernButton variant="ghost" onClick={() => navigate(`/news-events/${id}/edit`)} className="h-12 w-12 rounded-xl flex items-center justify-center bg-background border border-border/50 hover:bg-primary/5 text-primary">
+                                        <FaEdit />
+                                    </ModernButton>
+                                )}
+                                {canDelete() && (
+                                    <ModernButton
+                                        variant="ghost"
+                                        onClick={handleDelete}
+                                        disabled={deleteLoading}
+                                        className="h-12 w-12 rounded-xl flex items-center justify-center bg-background border border-border/50 hover:bg-error/5 text-error"
+                                    >
+                                        <FaTrash />
+                                    </ModernButton>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="max-w-7xl mx-auto px-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+                    {/* Article Body */}
+                    <article className="lg:col-span-8">
+                        <div className="prose prose-lg prose-primary max-w-none">
+                            {/* Decorative Feature Placeholder */}
+                            <div className="aspect-video rounded-[2.5rem] bg-gradient-to-br from-neutral-100 to-neutral-50 flex items-center justify-center mb-16 relative overflow-hidden border border-border/50 shadow-inner">
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+                                <FaBookOpen className="text-8xl text-primary opacity-5 relative z-10" />
+                            </div>
+
+                            <div className="space-y-8 text-text-primary/90 font-medium leading-relaxed">
+                                {article.description.split('\n\n').map((paragraph, index) => {
+                                    if (index === 0) {
+                                        return (
+                                            <div key={index} className="relative pl-12 mb-12">
+                                                <FaQuoteLeft className="absolute left-0 top-0 text-primary opacity-20 text-4xl" />
+                                                <p className="text-2xl font-black text-text-primary leading-snug tracking-tight">
+                                                    {paragraph}
+                                                </p>
+                                            </div>
+                                        );
+                                    }
+                                    return <p key={index}>{paragraph}</p>;
+                                })}
                             </div>
                         </div>
 
+                        {/* Author Footer Card */}
+                        <div className="mt-20 pt-12 border-t border-border/40">
+                            <ModernCard variant="elevated" padding="p-8" className="bg-neutral-50/50 border-none shadow-none">
+                                <div className="flex items-center gap-6">
+                                    <div className="h-20 w-20 rounded-3xl bg-white shadow-xl shadow-black/5 flex items-center justify-center text-3xl font-black text-primary">
+                                        {article.author?.name ? article.author.name.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">Author Spotlight</p>
+                                        <h3 className="text-xl font-black text-text-primary">{article.author?.name || 'Anonymous'}</h3>
+                                        <p className="text-sm font-bold text-text-secondary">
+                                            {article.author?.dept} Department • {article.author?.role}
+                                        </p>
+                                    </div>
+                                </div>
+                            </ModernCard>
+                        </div>
+                    </article>
+
+                    {/* Sidebar */}
+                    <aside className="lg:col-span-4 space-y-12">
                         {relatedArticles.length > 0 && (
-                            <div className="sidebar-section">
-                                <h4 className="sidebar-title">Related Articles</h4>
-                                <div className="related-articles">
+                            <div className="sticky top-24 space-y-8">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <span className="h-2 w-2 bg-primary rounded-full animate-pulse" /> Keep Reading
+                                </h4>
+                                <div className="space-y-6">
                                     {relatedArticles.map((related) => (
-                                        <div key={related._id} className="related-article-item mb-3">
-                                            <Link to={`/news/${related._id}`} className="related-article-link">
-                                                <div className="related-article-placeholder">
-                                                    <span className="placeholder-text">News</span>
-                                                </div>
-                                                <div className="related-article-content">
-                                                    <h5 className="related-article-title">{related.title}</h5>
-                                                    <div className="related-article-meta">
-                                                        <small className="text-muted">
-                                                            <FaUser className="me-1" />
-                                                            {related.author?.name || 'Unknown'}
-                                                        </small>
-                                                        <small className="text-muted ms-2">
-                                                            <FaCalendarAlt className="me-1" />
-                                                            {formatDate(related.created_at)}
-                                                        </small>
+                                        <Link key={related._id} to={`/news/${related._id}`} className="group block">
+                                            <ModernCard
+                                                padding="p-6"
+                                                className="border-transparent hover:border-primary/10 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+                                            >
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="aspect-[4/3] rounded-2xl bg-neutral-100 flex items-center justify-center group-hover:bg-primary/5 transition-colors">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary opacity-20">Preview</span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <h5 className="font-black text-text-primary group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                                                            {related.title}
+                                                        </h5>
+                                                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter text-text-secondary">
+                                                            <span>By {related.author?.name}</span>
+                                                            <FaChevronRight className="group-hover:translate-x-1 transition-transform" />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </Link>
-                                        </div>
+                                            </ModernCard>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
                         )}
-                    </Col>
-                </Row>
-            </Container>
+                    </aside>
+                </div>
+            </div>
+            <Footer />
         </div>
     );
 };

@@ -1,92 +1,45 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import FeedCreate from '../FeedCreate/FeedCreate';
 import FeedItem from '../FeedItem/FeedItem';
-import { Card, Button, Badge, Spinner, Nav, Form, InputGroup, Alert } from 'react-bootstrap';
 import axios from '../../../services/axios';
 import { toast } from 'react-toastify';
 import {
     FaHome, FaUser, FaEnvelope, FaBriefcase,
     FaCalendarAlt, FaGraduationCap, FaSearch,
-    FaRss, FaChartBar, FaCode, FaLightbulb
+    FaRss, FaChartBar, FaCode, FaLightbulb, FaFire, FaUsers
 } from 'react-icons/fa';
-import './FeedList.css';
-import Footer from '../../layout/Footer/Footer';
+import ModernCard from '../../common/ModernCard';
+import ModernButton from '../../common/ModernButton';
+import ModernBadge from '../../common/ModernBadge';
+import LoadingSkeleton, { CardSkeleton } from '../../common/LoadingSkeleton';
 
-// Fetch trending topics from API
 const fetchTrendingTopics = async (userDept) => {
-    try {
-        // In a real implementation, we would call an API to get trending topics by department
-        return [
-            { id: 1, name: `${userDept} Internships`, count: "250+ posts" },
-            { id: 2, name: `${userDept} Events`, count: "120+ posts" },
-            { id: 3, name: `${userDept} Workshop`, count: "85+ posts" },
-            { id: 4, name: `${userDept} Career Guidance`, count: "65+ posts" },
-        ];
-    } catch (error) {
-        console.error("Error fetching trending topics", error);
-        return [];
-    }
+    return [
+        { id: 1, name: `${userDept} Internships`, count: "250+ posts" },
+        { id: 2, name: `${userDept} Events`, count: "120+ posts" },
+        { id: 3, name: `${userDept} Workshop`, count: "85+ posts" },
+        { id: 4, name: `${userDept} Career Guidance`, count: "65+ posts" },
+    ];
 };
 
 const fetchSuggestedConnections = async (userDept) => {
-    try {
-        // In a real implementation, this would call an API to get users from the same department
-        // For now, mocking with placeholder data that shows department-specific suggestions
-        return [
-            {
-                id: 1,
-                name: "Tech Innovation Club",
-                role: `${userDept} Group`,
-                avatar: "/avatars/group1.jpg"
-            },
-            {
-                id: 2,
-                name: "Alumni Association",
-                role: `${userDept} Alumni`,
-                avatar: "/avatars/group2.jpg"
-            },
-            {
-                id: 3,
-                name: "Department Connect",
-                role: `${userDept} Network`,
-                avatar: "/avatars/group3.jpg"
-            },
-        ];
-    } catch (error) {
-        console.error("Error fetching suggested connections", error);
-        return [];
-    }
+    return [
+        { id: 1, name: "Tech Innovation Club", role: `${userDept} Group`, avatar: null },
+        { id: 2, name: "Alumni Association", role: `${userDept} Alumni`, avatar: null },
+        { id: 3, name: "Department Connect", role: `${userDept} Network`, avatar: null },
+    ];
 };
 
-// Fetch upcoming events from API
 const fetchUpcomingEvents = async (userDept) => {
-    try {
-        // Mock API call to get upcoming events filtered by department
-        return [
-            {
-                id: 1,
-                title: `${userDept} Recruitment Drive`,
-                date: "May 15, 2025",
-                attendees: 42,
-                icon: "FaBriefcase"
-            },
-            {
-                id: 2,
-                title: `${userDept} Workshop: Latest Trends`,
-                date: "May 22, 2025",
-                attendees: 28,
-                icon: "FaCode"
-            }
-        ];
-    } catch (error) {
-        console.error("Error fetching upcoming events", error);
-        return [];
-    }
+    return [
+        { id: 1, title: `${userDept} Recruitment Drive`, date: "May 15, 2025", attendees: 42, icon: FaBriefcase },
+        { id: 2, title: `${userDept} Workshop: Latest Trends`, date: "May 22, 2025", attendees: 28, icon: FaCode }
+    ];
 };
 
-const FeedList = ({ simulatedRole }) => {
+const FeedList = () => {
     const [feeds, setFeeds] = useState([]);
     const [trendingTopics, setTrendingTopics] = useState([]);
     const [suggestedConnections, setSuggestedConnections] = useState([]);
@@ -95,31 +48,13 @@ const FeedList = ({ simulatedRole }) => {
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
-    const { user: contextUser } = useAuth();
+    const { user } = useAuth();
+    const navigate = useNavigate();
 
-    // Support simulated role for comparison view
-    const user = simulatedRole ? { ...contextUser, role: simulatedRole } : contextUser;
-
-    // Avatar fallback function
-    const getAvatarSrc = (userData) => {
-        if (userData?.photo_url) {
-            return userData.photo_url;
-        }
-        return null;
-    };
-
-    // Get initials for avatar fallback
-    const getInitials = (name) => {
-        if (!name) return 'U';
-        return name.charAt(0).toUpperCase();
-    };
-
-    // Fetch feeds
     const fetchFeeds = useCallback(async () => {
-        setLoading(true);
         try {
-            const roleParam = simulatedRole ? `?role=${simulatedRole}` : '';
-            const response = await axios.get(`/feeds${roleParam}`);
+            setLoading(true);
+            const response = await axios.get('/feeds');
             setFeeds(response.data);
             setError("");
         } catch (error) {
@@ -130,33 +65,24 @@ const FeedList = ({ simulatedRole }) => {
         }
     }, []);
 
-    // Load sidebar data
     const loadSidebarData = useCallback(async () => {
-        try {
-            // Get user's department for filtered content
-            const userDept = user?.dept || 'General';
-
-            const [topics, connections, events] = await Promise.all([
-                fetchTrendingTopics(userDept),
-                fetchSuggestedConnections(userDept),
-                fetchUpcomingEvents(userDept)
-            ]);
-
-            setTrendingTopics(topics);
-            setSuggestedConnections(connections);
-            setUpcomingEvents(events);
-        } catch (error) {
-            console.error("Error loading sidebar data", error);
-        }
+        const userDept = user?.dept || 'General';
+        const [topics, connections, events] = await Promise.all([
+            fetchTrendingTopics(userDept),
+            fetchSuggestedConnections(userDept),
+            fetchUpcomingEvents(userDept)
+        ]);
+        setTrendingTopics(topics);
+        setSuggestedConnections(connections);
+        setUpcomingEvents(events);
     }, [user?.dept]);
 
     useEffect(() => {
         fetchFeeds();
         loadSidebarData();
-    }, [fetchFeeds, loadSidebarData, activeTab]);
+    }, [fetchFeeds, loadSidebarData]);
 
     const handleNewFeed = (newFeed) => {
-        // Ensure the new feed has correct author information
         const enrichedFeed = {
             ...newFeed,
             author: {
@@ -166,413 +92,258 @@ const FeedList = ({ simulatedRole }) => {
             },
             timestamp: new Date().toISOString()
         };
-
         setFeeds([enrichedFeed, ...feeds]);
-        toast.success("Post published successfully!");
-    };
-
-    const handleEdit = async (feedId, newContent) => {
-        try {
-            // In a real app, this would call an API
-            // For now, update the feeds state directly
-            const updatedFeeds = feeds.map(feed => {
-                if (feed._id === feedId) {
-                    return {
-                        ...feed,
-                        content: newContent,
-                        edited: true,
-                        edited_at: new Date().toISOString()
-                    };
-                }
-                return feed;
-            });
-
-            setFeeds(updatedFeeds);
-            toast.success("Post updated successfully!");
-        } catch (error) {
-            console.error('Error updating feed:', error);
-            toast.error('Failed to update post. Please try again.');
-        }
+        toast.success("Post published!");
     };
 
     const handleDelete = async (feedId) => {
-        if (window.confirm('Are you sure you want to delete this post?')) {
+        if (window.confirm('Delete this post?')) {
             try {
                 await axios.delete(`/feeds/${feedId}`);
-                setFeeds(prevFeeds => prevFeeds.filter(feed => feed._id !== feedId));
-                toast.success("Post successfully deleted!");
+                setFeeds(prev => prev.filter(f => f._id !== feedId));
+                toast.success("Post deleted");
             } catch (error) {
-                console.error('Error deleting feed:', error);
-                toast.error('Failed to delete post. Please try again.');
+                toast.error('Failed to delete');
             }
         }
     };
 
-    // For the like functionality (in a real app, this would call an API)
-    const handleLike = (feedId) => {
-        // Mock implementation
-        const updatedFeeds = feeds.map(feed => {
-            if (feed._id === feedId) {
-                const isLiked = feed.isLiked || false;
-                const likesCount = feed.likesCount || 0;
-
-                return {
-                    ...feed,
-                    isLiked: !isLiked,
-                    likesCount: isLiked ? likesCount - 1 : likesCount + 1
-                };
-            }
-            return feed;
-        });
-
-        setFeeds(updatedFeeds);
-        toast.info("Like status updated");
-    };
-
-    // Filter feeds based on active tab and search term
-    const getFilteredFeeds = () => {
-        let filtered = feeds;
-
-        // Apply search filter
-        if (searchTerm) {
-            filtered = filtered.filter(feed =>
-                feed.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                feed.author?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        // Apply tab filters
-        if (activeTab === "all") return filtered;
-
-        // For demonstration purposes. In a real app, these would be implemented with backend filters.
-        if (activeTab === "trending") return filtered.slice(0, 3); // Just show first 3 as "trending"
-        if (activeTab === "following") return filtered.filter((_, index) => index % 2 === 0); // Every other feed
-
-        return filtered;
-    };
-
-    // Get icon component for event
-    const getEventIcon = (iconName) => {
-        switch (iconName) {
-            case 'FaBriefcase':
-                return <FaBriefcase />;
-            case 'FaCode':
-                return <FaCode />;
-            default:
-                return <FaCalendarAlt />;
-        }
-    };
-
-    const filteredFeeds = getFilteredFeeds();
+    const filteredFeeds = feeds.filter(feed =>
+    (feed.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        feed.author?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     return (
-        <><div className="feed-container">
-            <div className="feed-wrapper">
-                {/* Left Sidebar */}
-                <div className="left-sidebar">
-                    <div className="sidebar-content">
-                        <div className="user-welcome mb-4">
-                            <div className="user-avatar" style={{
-                                backgroundImage: getAvatarSrc(user) ? `url(${getAvatarSrc(user)})` : 'none',
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
-                            }}>
-                                {!getAvatarSrc(user) && getInitials(user?.name)}
-                            </div>
-                            <div className="user-info">
-                                <h5 className="mb-0">{user?.name || 'User'}</h5>
-                                <small className="text-muted">@{user?.email?.split('@')[0] || 'user'}</small>
-                            </div>
-                        </div>
+        <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8 animate-in">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                        <nav className="sidebar-nav">
-                            <ul className="nav-list">
-                                <li className="nav-item active">
-                                    <Link to="/feeds" className="nav-link">
-                                        <FaHome className="nav-icon" />
-                                        <span>Home</span>
-                                    </Link>
-                                </li>
-                                <li className="nav-item">
-                                    <Link to="/profile" className="nav-link">
-                                        <FaUser className="nav-icon" />
-                                        <span>Profile</span>
-                                    </Link>
-                                </li>
-                                <li className="nav-item">
-                                    <Link to="/messages" className="nav-link">
-                                        <FaEnvelope className="nav-icon" />
-                                        <span>Messages</span>
-                                        <Badge bg="primary" className="ms-auto">3</Badge>
-                                    </Link>
-                                </li>
-                                <li className="nav-item">
-                                    <Link to="/news" className="nav-link">
-                                        <FaRss className="nav-icon" />
-                                        <span>News</span>
-                                    </Link>
-                                </li>
-                                <li className="nav-item">
-                                    <Link to="/jobs" className="nav-link">
-                                        <FaBriefcase className="nav-icon" />
-                                        <span>Jobs</span>
-                                    </Link>
-                                </li>
-                                <li className="nav-item">
-                                    <Link to="/events" className="nav-link">
-                                        <FaCalendarAlt className="nav-icon" />
-                                        <span>Events</span>
-                                    </Link>
-                                </li>
-                                {user && user.role === 'alumni' && (
-                                    <li className="nav-item">
-                                        <Link to="/alumni/mentorship" className="nav-link">
-                                            <FaGraduationCap className="nav-icon" />
-                                            <span>Mentorship</span>
-                                        </Link>
-                                    </li>
-                                )}
-                                {user && user.role === 'student' && (
-                                    <li className="nav-item">
-                                        <Link to="/projects/mentorship" className="nav-link">
-                                            <FaGraduationCap className="nav-icon" />
-                                            <span>Find Mentors</span>
-                                        </Link>
-                                    </li>
-                                )}
-                                {user && user.role === 'staff' && (
-                                    <li className="nav-item">
-                                        <Link to="/analytics" className="nav-link">
-                                            <FaChartBar className="nav-icon" />
-                                            <span>Analytics</span>
-                                        </Link>
-                                    </li>
-                                )}
-                            </ul>
+                {/* Left Sidebar - Profile & Nav */}
+                <div className="lg:col-span-3 space-y-8 h-fit lg:sticky lg:top-24">
+                    <ModernCard variant="flat" padding="p-6" className="border-primary/5 shadow-xl">
+                        <div className="h-24 bg-gradient-to-br from-primary via-blue-600 to-blue-400 relative overflow-hidden">
+                            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
+                        </div>
+                        <div className="px-6 pb-6 -mt-12 text-center relative">
+                            <div className="mx-auto h-24 w-24 rounded-2xl bg-surface p-1.5 shadow-2xl shadow-primary/20">
+                                <div className="h-full w-full rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-4xl font-black shadow-inner">
+                                    {user?.name?.charAt(0).toUpperCase()}
+                                </div>
+                            </div>
+                            <h3 className="mt-5 text-2xl font-black tracking-tight text-text-primary">{user?.name}</h3>
+                            <p className="text-sm font-semibold text-text-secondary opacity-70 italic">@{user?.email?.split('@')[0]}</p>
+
+                            <div className="mt-8 pt-8 border-t border-border/50 flex justify-around text-center">
+                                <div className="group cursor-pointer">
+                                    <p className="font-black text-xl text-primary group-hover:scale-110 transition-transform">124</p>
+                                    <p className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">Following</p>
+                                </div>
+                                <div className="border-l border-border/50 h-10 self-center" />
+                                <div className="group cursor-pointer">
+                                    <p className="font-black text-xl text-primary group-hover:scale-110 transition-transform">850</p>
+                                    <p className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">Followers</p>
+                                </div>
+                            </div>
+
+                            <ModernButton
+                                variant="secondary"
+                                size="sm"
+                                className="w-full mt-8 border-primary/20 hover:bg-primary text-xs tracking-widest font-black uppercase"
+                                onClick={() => navigate('/profile')}
+                            >
+                                View Detailed Profile
+                            </ModernButton>
+                        </div>
+                    </ModernCard>
+
+                    <ModernCard variant="flat" padding="p-3" className="hidden lg:block border-primary/5 shadow-xl">
+                        <nav className="space-y-1.5">
+                            {[
+                                { to: '/', icon: FaHome, label: 'Global Feed', active: true },
+                                { to: '/profile', icon: FaUser, label: 'My Profile' },
+                                { to: '/messages', icon: FaEnvelope, label: 'Direct Messages', badge: '3' },
+                                { to: '/news', icon: FaRss, label: 'Campus News' },
+                                { to: '/jobs', icon: FaBriefcase, label: 'Career Hub' },
+                                { to: '/events', icon: FaCalendarAlt, label: 'Events' },
+                            ].map((item) => (
+                                <Link
+                                    key={item.label}
+                                    to={item.to}
+                                    className={`
+                                        flex items-center gap-3.5 px-4 py-3.5 rounded-xl transition-all duration-normal group
+                                        ${item.active
+                                            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                                            : 'text-text-secondary hover:bg-primary/5 hover:text-primary'
+                                        }
+                                    `}
+                                >
+                                    <item.icon className={`text-xl transition-transform duration-normal group-hover:scale-110 ${item.active ? 'text-white' : ''}`} />
+                                    <span className="font-bold tracking-tight">{item.label}</span>
+                                    {item.badge && (
+                                        <span className="ml-auto bg-primary text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                                            {item.badge}
+                                        </span>
+                                    )}
+                                </Link>
+                            ))}
                         </nav>
-
-                        <div className="sidebar-cta">
-                            <Card className="cta-card">
-                                <Card.Body>
-                                    <h5><FaLightbulb className="me-2" /> Expand Your Network</h5>
-                                    <p>Connect with alumni, discover projects, find mentors and more!</p>
-                                    <Link to="/projects/collaborations" className="btn btn-primary btn-sm w-100">
-                                        Explore Collaborations
-                                    </Link>
-                                </Card.Body>
-                            </Card>
-                        </div>
-                    </div>
+                    </ModernCard>
                 </div>
 
-                {/* Main Content */}
-                <div className="main-content">
-                    <div className="content-header">
-                        <div className="header-title-wrapper">
-                            <h4 className="header-title">Community Feed</h4>
-                            <p className="text-muted mb-0">Connect, share, and grow with the community</p>
+                {/* Main Content - Feed */}
+                <main className="lg:col-span-6 space-y-8">
+                    {/* Search & Tabs */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="relative flex-1 group">
+                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-primary transition-colors">
+                                <FaSearch size={18} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search community..."
+                                className="w-full pl-14 pr-6 py-4 rounded-2xl bg-surface border-2 border-border/50 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all outline-none font-medium shadow-sm hover:shadow-md"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                        <div className="header-search">
-                            <InputGroup>
-                                <InputGroup.Text className="bg-light border-end-0">
-                                    <FaSearch />
-                                </InputGroup.Text>
-                                <Form.Control
-                                    placeholder="Search posts..."
-                                    className="bg-light border-start-0"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)} />
-                            </InputGroup>
+                        <div className="flex bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start">
+                            {['all', 'trending', 'following'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`
+                                        px-6 py-2.5 rounded-xl text-sm font-black transition-all uppercase tracking-widest
+                                        ${activeTab === tab
+                                            ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
+                                            : 'text-text-secondary hover:text-text-primary'
+                                        }
+                                    `}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="content-tabs">
-                        <Nav variant="tabs" className="feed-tabs">
-                            <Nav.Item>
-                                <Nav.Link
-                                    active={activeTab === "all"}
-                                    onClick={() => setActiveTab("all")}
-                                >
-                                    All Posts
-                                </Nav.Link>
-                            </Nav.Item>
-                            <Nav.Item>
-                                <Nav.Link
-                                    active={activeTab === "trending"}
-                                    onClick={() => setActiveTab("trending")}
-                                >
-                                    Trending
-                                </Nav.Link>
-                            </Nav.Item>
-                            <Nav.Item>
-                                <Nav.Link
-                                    active={activeTab === "following"}
-                                    onClick={() => setActiveTab("following")}
-                                >
-                                    Following
-                                </Nav.Link>
-                            </Nav.Item>
-                        </Nav>
-                    </div>
+                    {/* Create Post */}
+                    <FeedCreate onFeedCreated={handleNewFeed} />
 
-                    <div className="create-post-container">
-                        <FeedCreate onFeedCreated={handleNewFeed} />
-                    </div>
-
-                    {error && (
-                        <Alert variant="danger" className="my-3">
-                            {error}
-                        </Alert>
-                    )}
-
-                    {searchTerm && filteredFeeds.length === 0 && !loading && (
-                        <Alert variant="info" className="my-3">
-                            No posts match your search for "{searchTerm}"
-                        </Alert>
-                    )}
-
-                    {loading ? (
-                        <div className="text-center my-5">
-                            <Spinner animation="border" role="status" variant="primary">
-                                <span className="visually-hidden">Loading...</span>
-                            </Spinner>
-                            <p className="mt-2 text-muted">Loading posts...</p>
-                        </div>
-                    ) : (
-                        <div className="feeds-list">
-                            {filteredFeeds.length > 0 ? (
-                                filteredFeeds.map((feed) => (
-                                    <FeedItem
-                                        key={feed._id}
-                                        feed={feed}
-                                        onDelete={handleDelete}
-                                        onLike={handleLike}
-                                        onEdit={handleEdit}
-                                        currentUser={user} />
-                                ))
-                            ) : (
-                                <div className="text-center my-5">
-                                    <div className="empty-feed-icon mb-3">
-                                        <FaRss size={40} className="text-muted" />
-                                    </div>
-                                    <h5 className="text-muted">No posts found</h5>
-                                    <p className="text-muted mb-4">Be the first to share something with the community!</p>
-                                    <Button
-                                        variant="primary"
-                                        onClick={() => setActiveTab("all")}
-                                    >
-                                        View All Posts
-                                    </Button>
+                    {/* Posts List */}
+                    <div className="space-y-8">
+                        {loading ? (
+                            Array(3).fill(0).map((_, i) => <CardSkeleton key={i} />)
+                        ) : error ? (
+                            <ModernCard variant="flat" className="text-center text-error border-error/20 bg-error/5 py-8">
+                                <p className="font-bold">{error}</p>
+                                <ModernButton variant="danger" size="sm" className="mt-4" onClick={fetchFeeds}>Retry Fetching</ModernButton>
+                            </ModernCard>
+                        ) : filteredFeeds.length === 0 ? (
+                            <ModernCard className="text-center py-24 glass-card border-none">
+                                <div className="bg-primary/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <FaRss size={40} className="text-primary opacity-50" />
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Right Sidebar - Now with Real-time Data */}
-                <div className="right-sidebar">
-                    <div className="sidebar-content">
-                        {/* Trending Topics */}
-                        <Card className="sidebar-card trending-card">
-                            <Card.Header>
-                                <h5 className="mb-0">Trending Topics</h5>
-                            </Card.Header>
-                            <Card.Body>
-                                {trendingTopics.length > 0 ? (
-                                    <ul className="trending-list">
-                                        {trendingTopics.map(topic => (
-                                            <li key={topic.id} className="trending-item">
-                                                <Link to={`/search?q=${encodeURIComponent(topic.name)}`} className="trending-link">
-                                                    <h6 className="topic-name">#{topic.name}</h6>
-                                                    <span className="topic-count">{topic.count}</span>
-                                                </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <div className="text-center py-3">
-                                        <p className="text-muted mb-0">No trending topics yet</p>
-                                    </div>
-                                )}
-                            </Card.Body>
-                        </Card>
-
-                        {/* Suggested Connections */}
-                        <Card className="sidebar-card connections-card">
-                            <Card.Header>
-                                <h5 className="mb-0">Suggested Connections</h5>
-                            </Card.Header>
-                            <Card.Body>
-                                {suggestedConnections.length > 0 ? (
-                                    <ul className="connections-list">
-                                        {suggestedConnections.map(connection => (
-                                            <li key={connection.id} className="connection-item">
-                                                <div className="connection-avatar" style={{
-                                                    backgroundImage: `url(${connection.avatar})`,
-                                                    backgroundSize: 'cover',
-                                                    backgroundPosition: 'center'
-                                                }}>
-                                                    {!connection.avatar && connection.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="connection-info">
-                                                    <h6 className="connection-name">{connection.name}</h6>
-                                                    <span className="connection-role">{connection.role}</span>
-                                                </div>
-                                                <Button variant="primary" size="sm" className="connection-btn">
-                                                    Follow
-                                                </Button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <div className="text-center py-3">
-                                        <p className="text-muted mb-0">No suggestions available</p>
-                                    </div>
-                                )}
-                            </Card.Body>
-                        </Card>
-
-                        {/* Upcoming Events */}
-                        <Card className="sidebar-card events-card">
-                            <Card.Header>
-                                <h5 className="mb-0">Upcoming Events</h5>
-                            </Card.Header>
-                            <Card.Body>
-                                {upcomingEvents.length > 0 ? (
-                                    <ul className="events-list">
-                                        {upcomingEvents.map(event => (
-                                            <li key={event.id} className="event-item">
-                                                <div className="event-icon">
-                                                    {getEventIcon(event.icon)}
-                                                </div>
-                                                <div className="event-info">
-                                                    <h6 className="event-title">{event.title}</h6>
-                                                    <span className="event-date">{event.date}</span>
-                                                    <span className="event-attendees">{event.attendees} attending</span>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <div className="text-center py-3">
-                                        <p className="text-muted mb-0">No upcoming events</p>
-                                    </div>
-                                )}
-                                <div className="text-center mt-3">
-                                    <Link to="/events" className="btn btn-outline-primary btn-sm">
-                                        View All Events
-                                    </Link>
-                                </div>
-                            </Card.Body>
-                        </Card>
+                                <h3 className="text-2xl font-black tracking-tight">Quiet day in the community</h3>
+                                <p className="text-text-secondary font-medium mt-2">Be the innovator and start the first conversation!</p>
+                                <ModernButton variant="primary" className="mt-8" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                                    Create a Post
+                                </ModernButton>
+                            </ModernCard>
+                        ) : (
+                            filteredFeeds.map(feed => (
+                                <FeedItem
+                                    key={feed._id}
+                                    feed={feed}
+                                    onDelete={handleDelete}
+                                    currentUser={user}
+                                />
+                            ))
+                        )}
                     </div>
-                </div>
+                </main>
+
+                {/* Right Sidebar - Trends & Suggestions */}
+                <aside className="lg:col-span-3 space-y-8">
+                    {/* Trending */}
+                    <ModernCard padding="p-8" className="border-primary/5 shadow-xl shadow-primary/5">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="p-2.5 bg-orange-500/10 rounded-xl">
+                                <FaFire className="text-orange-600 text-xl" />
+                            </div>
+                            <h3 className="font-black text-lg tracking-tight">Viral Trends</h3>
+                        </div>
+                        <div className="space-y-6">
+                            {trendingTopics.map(topic => (
+                                <Link
+                                    key={topic.id}
+                                    to={`/search?q=${topic.name}`}
+                                    className="block group"
+                                >
+                                    <p className="font-black text-base group-hover:text-primary transition-colors flex items-center gap-2">
+                                        <span className="text-primary opacity-50">#</span>
+                                        {topic.name}
+                                    </p>
+                                    <p className="text-xs font-bold text-text-secondary mt-1 ml-5 uppercase tracking-widest">{topic.count}</p>
+                                </Link>
+                            ))}
+                        </div>
+                    </ModernCard>
+
+                    {/* Suggested Connections */}
+                    <ModernCard padding="p-8" className="border-primary/5 shadow-xl shadow-primary/5">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="p-2.5 bg-primary/10 rounded-xl">
+                                <FaUsers className="text-primary text-xl" />
+                            </div>
+                            <h3 className="font-black text-lg tracking-tight">Hub Suggestions</h3>
+                        </div>
+                        <div className="space-y-6">
+                            {suggestedConnections.map(conn => (
+                                <div key={conn.id} className="flex items-center gap-4 group">
+                                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center font-black text-primary shadow-sm group-hover:scale-110 transition-transform">
+                                        {conn.name.charAt(0)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-black truncate text-text-primary">{conn.name}</p>
+                                        <p className="text-[10px] font-bold text-text-secondary truncate uppercase tracking-widest mt-1">{conn.role}</p>
+                                    </div>
+                                    <ModernButton variant="ghost" size="xs" className="px-3 py-1 font-black text-[10px] uppercase">Join</ModernButton>
+                                </div>
+                            ))}
+                        </div>
+                    </ModernCard>
+
+                    {/* Upcoming Events */}
+                    <ModernCard padding="p-8" className="border-success/5 shadow-xl shadow-success/5">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="p-2.5 bg-success/10 rounded-xl">
+                                <FaCalendarAlt className="text-success text-xl" />
+                            </div>
+                            <h3 className="font-black text-lg tracking-tight">Next Milestones</h3>
+                        </div>
+                        <div className="space-y-6">
+                            {upcomingEvents.map(event => (
+                                <div key={event.id} className="flex gap-4 group cursor-pointer">
+                                    <div className="mt-1 group-hover:scale-125 transition-transform duration-normal">
+                                        <event.icon className="text-text-secondary group-hover:text-success" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black leading-tight text-text-primary group-hover:text-primary transition-colors">{event.title}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] font-black py-0.5 px-2 bg-gray-100 dark:bg-gray-800 rounded text-text-secondary uppercase tracking-tighter italic">
+                                                {event.date}
+                                            </span>
+                                            <ModernBadge variant="success" size="sm" dot>
+                                                {event.attendees} IN
+                                            </ModernBadge>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <ModernButton variant="secondary" className="w-full mt-8 py-3 text-[10px] font-black uppercase tracking-widest">Explore All Events</ModernButton>
+                    </ModernCard>
+                </aside>
             </div>
         </div>
-            <>
-                <Footer />
-            </>
-        </>
     );
 };
 

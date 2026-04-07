@@ -9,6 +9,9 @@ class SocketService {
         this.messagesReadCallbacks = [];
         this.userStatusCallbacks = [];
         this.newJobCallbacks = [];
+        this.connectionRequestCallbacks = [];
+        this.requestAcceptedCallbacks = [];
+        this.requestRejectedCallbacks = [];
     }
 
     connect(email) {
@@ -72,6 +75,21 @@ class SocketService {
         this.socket.on('new_job', (job) => {
             // console.log('Received new_job event:', job);
             this.newJobCallbacks.forEach(callback => callback(job));
+        });
+
+        this.socket.on('connection_request', (data) => {
+            // console.log('Received connection_request event:', data);
+            this.connectionRequestCallbacks.forEach(callback => callback(data));
+        });
+
+        this.socket.on('request_accepted', (data) => {
+            // console.log('Received request_accepted event:', data);
+            this.requestAcceptedCallbacks.forEach(callback => callback(data));
+        });
+
+        this.socket.on('request_rejected', (data) => {
+            // console.log('Received request_rejected event:', data);
+            this.requestRejectedCallbacks.forEach(callback => callback(data));
         });
     }
 
@@ -171,6 +189,24 @@ class SocketService {
         }
     }
 
+    onConnectionRequest(callback) {
+        if (typeof callback === 'function') {
+            this.connectionRequestCallbacks.push(callback);
+        }
+    }
+
+    onRequestAccepted(callback) {
+        if (typeof callback === 'function') {
+            this.requestAcceptedCallbacks.push(callback);
+        }
+    }
+
+    onRequestRejected(callback) {
+        if (typeof callback === 'function') {
+            this.requestRejectedCallbacks.push(callback);
+        }
+    }
+
     // Remove event listeners
     offNewJob(callback) {
         if (callback) {
@@ -201,6 +237,30 @@ class SocketService {
             this.userStatusCallbacks = this.userStatusCallbacks.filter(cb => cb !== callback);
         } else {
             this.userStatusCallbacks = [];
+        }
+    }
+
+    offConnectionRequest(callback) {
+        if (callback) {
+            this.connectionRequestCallbacks = this.connectionRequestCallbacks.filter(cb => cb !== callback);
+        } else {
+            this.connectionRequestCallbacks = [];
+        }
+    }
+
+    offRequestAccepted(callback) {
+        if (callback) {
+            this.requestAcceptedCallbacks = this.requestAcceptedCallbacks.filter(cb => cb !== callback);
+        } else {
+            this.requestAcceptedCallbacks = [];
+        }
+    }
+
+    offRequestRejected(callback) {
+        if (callback) {
+            this.requestRejectedCallbacks = this.requestRejectedCallbacks.filter(cb => cb !== callback);
+        } else {
+            this.requestRejectedCallbacks = [];
         }
     }
 }

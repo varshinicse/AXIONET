@@ -12,39 +12,44 @@ logger = logging.getLogger(__name__)
 
 class Connection:
     @staticmethod
-    def get_user_connections(user_id):
+    def get_user_connections(user_id, type="all"):
         """
-        Get all connections for a specific user.
+        Get connections for a specific user.
 
         Args:
             user_id (str): The user's ID
+            type (str): "followers", "following", or "all"
 
         Returns:
-            list: List of connections with connected user details
+            list: List of connections with details
         """
         try:
-            # Find all accepted connections where user is either user1 or user2
-            connections = list(
-                connections_collection.find(
-                    {
-                        "$and": [
-                            {"status": "accepted"},
-                            {"$or": [{"user1_id": user_id}, {"user2_id": user_id}]},
-                        ]
-                    }
-                )
-            )
+            query = {"status": "accepted"}
+            if type == "followers":
+                query["user2_id"] = user_id
+            elif type == "following":
+                query["user1_id"] = user_id
+            else:
+                query["$or"] = [{"user1_id": user_id}, {"user2_id": user_id}]
+
+            connections = list(connections_collection.find(query).sort("updated_at", -1))
 
             result = []
             for connection in connections:
-                # Determine which user ID is the other user
-                other_user_id = (
-                    connection["user2_id"]
-                    if connection["user1_id"] == user_id
-                    else connection["user1_id"]
-                )
+                # If we are looking for followers, the other user is user1
+                # If we are looking for following, the other user is user2
+                # If "all", we determine based on current user
+                if type == "followers":
+                    other_user_id = connection["user1_id"]
+                elif type == "following":
+                    other_user_id = connection["user2_id"]
+                else:
+                    other_user_id = (
+                        connection["user2_id"]
+                        if connection["user1_id"] == user_id
+                        else connection["user1_id"]
+                    )
 
-                # Get user details
                 other_user = users_collection.find_one({"_id": ObjectId(other_user_id)})
 
                 if other_user:
@@ -52,6 +57,7 @@ class Connection:
                         {
                             "connection_id": str(connection["_id"]),
                             "connected_at": connection["updated_at"].isoformat(),
+                            "type": "following" if connection["user1_id"] == user_id else "follower",
                             "user": {
                                 "_id": str(other_user["_id"]),
                                 "name": other_user["name"],
@@ -75,46 +81,55 @@ class Connection:
         Check the connection status between two users.
 
         Args:
-            user1_id (str): The first user's ID
-            user2_id (str): The second user's ID
+            user1_id (str): The current user's ID
+            user2_id (str): The target profile user's ID
 
         Returns:
             dict: Connection status information
         """
         try:
-            # Check if already connected
-            connection = connections_collection.find_one(
-                {
-                    "$and": [
-                        {
-                            "$or": [
-                                {
-                                    "$and": [
-                                        {"user1_id": user1_id},
-                                        {"user2_id": user2_id},
-                                    ]
-                                },
-                                {
-                                    "$and": [
-                                        {"user1_id": user2_id},
-                                        {"user2_id": user1_id},
-                                    ]
-                                },
-                            ]
-                        },
-                        {"status": "accepted"},
-                    ]
-                }
+            # Check if user1 follows user2
+            i_follow = connections_collection.find_one(
+                {"user1_id": user1_id, "user2_id": user2_id, "status": "accepted"}
+            )
+            
+            # Check if user2 follows user1
+            they_follow = connections_collection.find_one(
+                {"user1_id": user2_id, "user2_id": user1_id, "status": "accepted"}
             )
 
-            if connection:
+            if i_follow and they_follow:
                 return {
-                    "status": "connected",
-                    "connection_id": str(connection["_id"]),
-                    "connected_at": connection["updated_at"].isoformat(),
+                    "status": "mutual",
+                    "follow_id": str(i_follow["_id"]),
+                    "followed_back_id": str(they_follow["_id"])
+                }
+            
+            if i_follow:
+                return {
+                    "status": "following",
+                    "follow_id": str(i_follow["_id"])
+                }
+            
+            if they_follow:
+                # Check if there's a pending request from user1 to user2
+                sent_request = connection_requests_collection.find_one(
+                    {"from_user_id": user1_id, "to_user_id": user2_id, "status": "pending"}
+                )
+                
+                if sent_request:
+                    return {
+                        "status": "pending_sent",
+                        "request_id": str(sent_request["_id"]),
+                        "is_follower": True
+                    }
+
+                return {
+                    "status": "follower",
+                    "follow_id": str(they_follow["_id"])
                 }
 
-            # Check if there's a pending request from user1 to user2
+            # Check for pending requests if no follow relationship exists
             sent_request = connection_requests_collection.find_one(
                 {"from_user_id": user1_id, "to_user_id": user2_id, "status": "pending"}
             )
@@ -123,10 +138,8 @@ class Connection:
                 return {
                     "status": "pending_sent",
                     "request_id": str(sent_request["_id"]),
-                    "created_at": sent_request["created_at"].isoformat(),
                 }
 
-            # Check if there's a pending request from user2 to user1
             received_request = connection_requests_collection.find_one(
                 {"from_user_id": user2_id, "to_user_id": user1_id, "status": "pending"}
             )
@@ -135,11 +148,9 @@ class Connection:
                 return {
                     "status": "pending_received",
                     "request_id": str(received_request["_id"]),
-                    "created_at": received_request["created_at"].isoformat(),
                 }
 
-            # No connection or pending request
-            return {"status": "not_connected"}
+            return {"status": "none"}
         except Exception as e:
             logger.error(f"Error in get_connection_status: {str(e)}")
             return {"status": "error", "message": str(e)}
@@ -240,23 +251,11 @@ class Connection:
                     "status_code": 400,
                 }
 
-            # Check if there's already a pending request in either direction
+            # Check if there's already a pending request from user1 to user2
             existing_request = connection_requests_collection.find_one(
                 {
-                    "$or": [
-                        {
-                            "$and": [
-                                {"from_user_id": from_user_id},
-                                {"to_user_id": to_user_id},
-                            ]
-                        },
-                        {
-                            "$and": [
-                                {"from_user_id": to_user_id},
-                                {"to_user_id": from_user_id},
-                            ]
-                        },
-                    ],
+                    "from_user_id": from_user_id,
+                    "to_user_id": to_user_id,
                     "status": "pending",
                 }
             )
@@ -327,15 +326,21 @@ class Connection:
             if status == "accepted":
                 from_user_id = connection_request["from_user_id"]
 
-                new_connection = {
+                # Ensure we don't create duplicate follows
+                existing_follow = connections_collection.find_one({
                     "user1_id": from_user_id,
-                    "user2_id": user_id,
-                    "status": "accepted",
-                    "created_at": datetime.now(timezone.utc),
-                    "updated_at": datetime.now(timezone.utc),
-                }
-
-                connections_collection.insert_one(new_connection)
+                    "user2_id": user_id
+                })
+                
+                if not existing_follow:
+                    new_connection = {
+                        "user1_id": from_user_id,  # Follower
+                        "user2_id": user_id,       # Followed
+                        "status": "accepted",
+                        "created_at": datetime.now(timezone.utc),
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                    connections_collection.insert_one(new_connection)
 
             return True
         except Exception as e:

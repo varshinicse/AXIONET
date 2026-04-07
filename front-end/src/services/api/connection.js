@@ -13,6 +13,28 @@ export const connectionService = {
         }
     },
 
+    // Get followers
+    getFollowers: async () => {
+        try {
+            const response = await axios.get('/connections/followers');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching followers:', error);
+            throw error;
+        }
+    },
+
+    // Get following
+    getFollowing: async () => {
+        try {
+            const response = await axios.get('/connections/following');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching following:', error);
+            throw error;
+        }
+    },
+
     // Get pending connection requests
     getConnectionRequests: async () => {
         try {

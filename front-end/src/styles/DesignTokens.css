@@ -1,0 +1,129 @@
+:root {
+    /* Primitive Tokens - Raw Values */
+    --raw-blue-50: #eff6ff;
+    --raw-blue-100: #dbeafe;
+    --raw-blue-500: #3b82f6;
+    --raw-blue-600: #2563eb;
+    --raw-blue-700: #1d4ed8;
+    --raw-blue-900: #1e3a8a;
+
+    --raw-gray-50: #f8fafc;
+    --raw-gray-100: #f1f5f9;
+    --raw-gray-200: #e2e8f0;
+    --raw-gray-300: #cbd5e1;
+    --raw-gray-400: #94a3b8;
+    --raw-gray-500: #64748b;
+    --raw-gray-600: #475569;
+    --raw-gray-700: #334155;
+    --raw-gray-800: #1e293b;
+    --raw-gray-900: #0f172a;
+
+    --raw-amber-500: #f59e0b;
+    --raw-green-500: #10b981;
+    --raw-red-500: #ef4444;
+
+    /* Semantic Tokens - Light Mode */
+    --color-primary: var(--raw-blue-600);
+    --color-primary-hover: var(--raw-blue-700);
+    --color-primary-light: rgba(37, 99, 235, 0.1);
+    --color-primary-lighter: rgba(37, 99, 235, 0.05);
+    --color-secondary: var(--raw-amber-500);
+    --color-success: var(--raw-green-500);
+    --color-error: var(--raw-red-500);
+    --color-warning: var(--raw-amber-500);
+
+    --color-bg: var(--raw-gray-50);
+    --color-surface: #ffffff;
+    --color-text-primary: var(--raw-gray-900);
+    --color-text-secondary: var(--raw-gray-500);
+    --color-border: var(--raw-gray-200);
+
+    /* Spacing System */
+    --space-unit: 4px;
+    --space-0-5: 2px;
+    --space-1: 4px;
+    --space-1-5: 6px;
+    --space-2: 8px;
+    --space-2-5: 10px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Typography Scale */
+    --font-size-xs: 0.75rem;
+    /* 12px */
+    --font-size-sm: 0.875rem;
+    /* 14px */
+    --font-size-base: 1rem;
+    /* 16px */
+    --font-size-lg: 1.125rem;
+    /* 18px */
+    --font-size-xl: 1.25rem;
+    /* 20px */
+    --font-size-2xl: 1.5rem;
+    /* 24px */
+    --font-size-3xl: 1.875rem;
+    /* 30px */
+    --font-size-4xl: 2.25rem;
+    /* 36px */
+    --font-size-5xl: 3rem;
+    /* 48px */
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+
+    /* Elevation */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-primary: 0 10px 15px -3px rgba(37, 99, 235, 0.2), 0 4px 6px -4px rgba(37, 99, 235, 0.1);
+    --shadow-primary-lg: 0 20px 25px -5px rgba(37, 99, 235, 0.3), 0 8px 10px -6px rgba(37, 99, 235, 0.2);
+
+    /* Glassmorphism Refined */
+    --glass-bg: rgba(255, 255, 255, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-blur: 16px;
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
+    /* Neumorphism (Light Mode) */
+    --neu-flat-shadow: 6px 6px 12px rgba(0, 0, 0, 0.05), -6px -6px 12px rgba(255, 255, 255, 0.8);
+    --neu-pressed-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.05), inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+
+    /* Motion Refined */
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Semantic Tokens - Dark Mode */
+.dark {
+    --color-primary: var(--raw-blue-500);
+    --color-primary-hover: var(--raw-blue-400);
+    --color-primary-light: rgba(59, 130, 246, 0.2);
+    --color-primary-lighter: rgba(59, 130, 246, 0.1);
+    --color-bg: var(--raw-gray-900);
+    --color-surface: var(--raw-gray-800);
+    --color-text-primary: var(--raw-gray-50);
+    --color-text-secondary: var(--raw-gray-400);
+    --color-border: var(--raw-gray-700);
+
+    --shadow-primary: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --shadow-primary-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+
+    --glass-bg: rgba(17, 24, 39, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+
+    --neu-flat-shadow: 5px 5px 15px rgba(0, 0, 0, 0.5), -5px -5px 15px rgba(255, 255, 255, 0.05);
+    --neu-pressed-shadow: inset 5px 5px 15px rgba(0, 0, 0, 0.5), inset -5px -5px 15px rgba(255, 255, 255, 0.05);
+}

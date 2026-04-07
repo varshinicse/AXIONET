@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Spinner } from 'react-bootstrap';
 import { analyticsService } from '../../services/api/analytics';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
     FaChartPie, FaGraduationCap, FaUsers, FaBriefcase
 } from 'react-icons/fa';
@@ -53,9 +53,8 @@ const AnalyticsSidebar = ({ activeSection, setActiveSection }) => {
     );
 };
 
-const AnalyticsDashboard = ({ simulatedRole }) => {
-    const { user: contextUser } = useAuth();
-    const user = simulatedRole ? { ...contextUser, role: simulatedRole } : contextUser;
+const AnalyticsDashboard = () => {
+    const { user } = useAuth();
 
     const [loading, setLoading] = useState(true);
     const [analyticsData, setAnalyticsData] = useState(null);
@@ -66,7 +65,7 @@ const AnalyticsDashboard = ({ simulatedRole }) => {
         const fetchAnalytics = async () => {
             try {
                 setLoading(true);
-                const data = await analyticsService.getAnalytics(simulatedRole);
+                const data = await analyticsService.getAnalytics();
                 setAnalyticsData(data);
             } catch (error) {
                 console.error("Error fetching analytics:", error);

@@ -1,328 +1,210 @@
-// src/components/feed/FeedItem/FeedItem.js
 import React, { useState } from 'react';
-import { Card, Dropdown, Button, Form, Modal } from 'react-bootstrap';
 import {
     FaRegHeart, FaRegComment, FaShare, FaEllipsisH,
-    FaBookmark, FaHeart, FaComment, FaRegPaperPlane,
-    FaTrashAlt, FaEdit
+    FaBookmark, FaHeart, FaRegPaperPlane,
+    FaTrashAlt, FaEdit, FaCheckCircle, FaClock, FaRegShareSquare
 } from 'react-icons/fa';
-import { useAuth } from '../../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import './FeedItem.css';
+import { formatDistanceToNow } from 'date-fns';
+import ModernCard from '../../common/ModernCard';
+import ModernButton from '../../common/ModernButton';
+import ModernBadge from '../../common/ModernBadge';
 
-const FeedItem = ({ feed, onDelete, onLike, currentUser, onEdit }) => {
+const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
     const [commentText, setCommentText] = useState('');
     const [showComments, setShowComments] = useState(false);
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editedContent, setEditedContent] = useState('');
-    const { user } = useAuth();
+    const [isLiked, setIsLiked] = useState(feed.isLiked || false);
+    const [likesCount, setLikesCount] = useState(feed.likesCount || 0);
 
-    // Avatar handling
-    const getAvatarSrc = (userData) => {
-        if (userData?.photo_url) {
-            return userData.photo_url;
-        }
-        return null;
+    // Safely handle author which could be a string or an object
+    const authorName = typeof feed.author === 'object' ? feed.author?.name : feed.author;
+    const authorInitial = (authorName || '?').toString().charAt(0).toUpperCase();
+
+    const handleLike = () => {
+        setIsLiked(!isLiked);
+        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     };
 
-    // Get initials for avatar fallback
-    const getInitials = (name) => {
-        if (!name) return 'U';
-        return name.charAt(0).toUpperCase();
-    };
-
-    // Format date for better readability
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-
-        if (diffInMinutes < 1) {
-            return 'Just now';
-        } else if (diffInMinutes < 60) {
-            return `${diffInMinutes} min${diffInMinutes === 1 ? '' : 's'} ago`;
-        } else if (diffInMinutes < 24 * 60) {
-            const hours = Math.floor(diffInMinutes / 60);
-            return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-        } else if (diffInMinutes < 7 * 24 * 60) {
-            const days = Math.floor(diffInMinutes / (24 * 60));
-            return `${days} day${days === 1 ? '' : 's'} ago`;
-        } else {
-            const options = {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            };
-            return date.toLocaleDateString(undefined, options);
+        if (!dateString) return '';
+        try {
+            return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+        } catch (e) {
+            return '';
         }
     };
 
-    // Check if user can edit/delete the post
-    const canDelete = () => {
-        if (!user) return false;
-        return user.email === feed.author?.email || user.role === 'staff';
-    };
-
-    // Handle edit post
-    const handleEdit = () => {
-        setEditedContent(feed.content);
-        setEditModalOpen(true);
-    };
-
-    // Handle save edited post
-    const handleSaveEdit = () => {
-        if (!editedContent.trim()) return;
-        onEdit(feed._id, editedContent);
-        setEditModalOpen(false);
-    };
-
-    // Handle comment submission
-    const handleSubmitComment = (e) => {
-        e.preventDefault();
-        if (!commentText.trim()) return;
-
-        // In a real app, this would call an API to save the comment
-        // console.log('Comment submitted:', commentText);
-
-        // Clear input after submission
-        setCommentText('');
-    };
-
-    // Get like count
-    const getLikeCount = () => {
-        return feed.likesCount || 0;
-    };
-
-    // Get comment count
-    const getCommentCount = () => {
-        return feed.comments?.length || 0;
-    };
-
-    // Check if post is liked by current user
-    const isLikedByUser = () => {
-        return feed.isLiked || false;
-    };
-
-    // Media handling (Post images)
-    const getMediaSrc = (url) => {
-        if (!url) return null;
-        if (url.startsWith('http')) return url;
-        return `http://127.0.0.1:5001${url}`;
+    const getRoleVariant = (role) => {
+        switch (role?.toLowerCase()) {
+            case 'admin': return 'error';
+            case 'staff': return 'warning';
+            case 'alumni': return 'success';
+            default: return 'primary';
+        }
     };
 
     return (
-        <Card className={`feed-item-card ${feed.type === 'job' ? 'job-post-card' : ''}`}>
-            <Card.Body>
-                <div className="feed-header">
-                    <div className="feed-author">
-                        <Link to={`/profile/${feed.author?.email}`} className="author-link">
-                            <div className="author-avatar" style={{
-                                backgroundImage: getAvatarSrc(feed.author) ? `url(${getAvatarSrc(feed.author)})` : 'none',
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
-                            }}>
-                                {!getAvatarSrc(feed.author) && getInitials(feed.author?.name)}
+        <ModernCard
+            variant="flat"
+            padding="p-0"
+            className="group animate-in border-primary/10 hover:border-primary/30 shadow-lg transition-all duration-slow"
+        >
+            {/* Header */}
+            <div className="p-6 pb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link to={`/profile/${feed.user_id}`} className="relative">
+                            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-xl font-black shadow-md group-hover:scale-105 transition-all">
+                                {authorInitial}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 bg-surface p-0.5 rounded-lg border-2 border-surface">
+                                <div className="bg-success h-3 w-3 rounded-full border-2 border-surface animate-pulse" title="Online" />
                             </div>
                         </Link>
-                        <div className="author-info">
-                            <Link to={`/profile/${feed.author?.email}`} className="author-name-link">
-                                <h6 className="author-name">
-                                    {feed.author?.name || 'Unknown User'}
-                                    {feed.type === 'job' && <span className="job-badge ms-2">Hiring</span>}
-                                </h6>
-                            </Link>
-                            <small className="post-date">{formatDate(feed.timestamp)}</small>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    to={`/profile/${feed.user_id}`}
+                                    className="font-black text-lg tracking-tight text-text-primary hover:text-primary transition-colors"
+                                >
+                                    {authorName}
+                                </Link>
+                                <FaCheckCircle className="text-primary text-xs" title="Verified Member" />
+                                <ModernBadge variant={getRoleVariant(feed.role)} size="sm" className="ml-1 opacity-90 uppercase tracking-tighter italic">
+                                    {feed.role || 'Member'}
+                                </ModernBadge>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 text-text-secondary opacity-60 text-xs font-bold uppercase tracking-widest">
+                                <FaClock className="text-[10px]" />
+                                {formatDate(feed.created_at)}
+                            </div>
                         </div>
                     </div>
-                    <div className="feed-actions">
-                        <Dropdown align="end">
-                            <Dropdown.Toggle variant="link" id={`dropdown-${feed._id}`} className="dropdown-toggle-no-arrow">
-                                <FaEllipsisH />
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                <Dropdown.Item onClick={() => onLike(feed._id)}>
-                                    <FaBookmark className="me-2" /> Save Post
-                                </Dropdown.Item>
-                                <Dropdown.Item>
-                                    <FaShare className="me-2" /> Share Post
-                                </Dropdown.Item>
-                                {canDelete() && (
-                                    <>
-                                        <Dropdown.Item
-                                            onClick={() => handleEdit(feed._id)}
-                                        >
-                                            <FaEdit className="me-2" /> Edit Post
-                                        </Dropdown.Item>
-                                        <Dropdown.Item
-                                            className="text-danger"
-                                            onClick={() => onDelete(feed._id)}
-                                        >
-                                            <FaTrashAlt className="me-2" /> Delete Post
-                                        </Dropdown.Item>
-                                    </>
-                                )}
-                            </Dropdown.Menu>
-                        </Dropdown>
+
+                    <div className="flex items-center gap-2">
+                        {currentUser?._id === feed.user_id && (
+                            <ModernButton
+                                variant="ghost"
+                                size="sm"
+                                className="text-error/60 hover:text-error hover:bg-error/5 p-2 rounded-xl"
+                                onClick={() => onDelete(feed._id)}
+                            >
+                                <FaTrashAlt />
+                            </ModernButton>
+                        )}
+                        <ModernButton variant="ghost" size="sm" className="p-2 rounded-xl">
+                            <FaEllipsisH />
+                        </ModernButton>
                     </div>
                 </div>
+            </div>
 
-                <div className="feed-content">
-                    <p className="content-text">{feed.content}</p>
-                    {feed.type === 'job' && feed.reference_id && (
-                        <div className="mt-2 mb-3">
-                            <Link to={`/jobs/${feed.reference_id}`} className="btn btn-outline-primary btn-sm">
-                                View Job Details
-                            </Link>
-                        </div>
-                    )}
-                    {feed.image_url && (
-                        <div className="post-image-container mb-3">
-                            <img
-                                src={getMediaSrc(feed.image_url)}
-                                alt="Post media"
-                                className="img-fluid rounded post-image"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                }}
-                            />
-                        </div>
-                    )}
-                    {feed.edited && (
-                        <small className="text-muted edit-indicator d-block mb-2">
-                            (Edited {feed.edited_at ? formatDate(feed.edited_at) : ''})
-                        </small>
-                    )}
+            {/* Content */}
+            <div className="px-8 pb-6">
+                <p className="text-text-primary text-lg leading-relaxed font-medium whitespace-pre-wrap select-text">
+                    {feed.content}
+                </p>
+
+                {feed.tags && feed.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-6">
+                        {feed.tags.map(tag => (
+                            <span
+                                key={tag}
+                                className="text-sm font-black text-primary hover:text-blue-600 cursor-pointer bg-primary/5 px-3 py-1 rounded-lg transition-all hover:scale-105"
+                            >
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Stats */}
+            <div className="px-8 py-4 border-y border-border/50 bg-gray-50/30 dark:bg-gray-900/10 flex items-center justify-between text-xs font-black uppercase tracking-widest text-text-secondary">
+                <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors">
+                        <span className="text-primary">{likesCount}</span> Endorsements
+                    </span>
+                    <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors">
+                        <span className="text-primary">12</span> Insights
+                    </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <span className="text-primary">4</span> Shared Hub
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-3 bg-surface group-hover:bg-gray-50/50 dark:group-hover:bg-gray-900/50 transition-all">
+                <div className="grid grid-cols-3 gap-2">
+                    <button
+                        onClick={handleLike}
+                        className={`
+                            flex items-center justify-center gap-3 py-3 rounded-xl font-black text-sm transition-all
+                            ${isLiked ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-primary/5 hover:text-primary'}
+                        `}
+                    >
+                        {isLiked ? <FaHeart className="text-lg animate-bounce" /> : <FaRegHeart className="text-lg" />}
+                        <span className="uppercase tracking-widest hidden md:inline">Endorse</span>
+                    </button>
+
+                    <button onClick={() => setShowComments(!showComments)} className="flex items-center justify-center gap-3 py-3 rounded-xl text-text-secondary font-black text-sm hover:bg-primary/5 hover:text-primary transition-all">
+                        <FaRegComment className="text-lg" />
+                        <span className="uppercase tracking-widest hidden md:inline">Insight</span>
+                    </button>
+
+                    <button className="flex items-center justify-center gap-3 py-3 rounded-xl text-text-secondary font-black text-sm hover:bg-primary/5 hover:text-primary transition-all">
+                        <FaRegShareSquare className="text-lg" />
+                        <span className="uppercase tracking-widest hidden md:inline">Syndicate</span>
+                    </button>
                 </div>
 
-                <div className="feed-footer">
-                    <div className="interaction-stats">
-                        <span className="stats-item">
-                            <FaHeart className={`stats-icon ${isLikedByUser() ? 'text-danger' : ''}`} />
-                            {getLikeCount()} likes
-                        </span>
-                        <span className="stats-item" onClick={() => setShowComments(!showComments)}>
-                            <FaComment className="stats-icon" />
-                            {getCommentCount()} comments
-                        </span>
-                    </div>
+                {/* Comments Section */}
+                {showComments && (
+                    <div className="p-4 bg-gray-50/50 dark:bg-gray-900/20 border-t border-border/50 mt-2 rounded-xl animate-in">
+                        <div className="flex gap-3 mb-4">
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
+                                {currentUser?.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 relative">
+                                <input
+                                    type="text"
+                                    placeholder="Write a comment..."
+                                    className="w-full bg-surface border border-border rounded-xl py-2 pl-4 pr-10 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                />
+                                <button
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:scale-110 transition-transform disabled:opacity-30"
+                                    disabled={!commentText.trim()}
+                                >
+                                    <FaRegPaperPlane size={14} />
+                                </button>
+                            </div>
+                        </div>
 
-                    <hr className="interaction-divider" />
-
-                    <div className="interaction-buttons">
-                        <Button
-                            variant="link"
-                            className={`interaction-btn ${isLikedByUser() ? 'liked' : ''}`}
-                            onClick={() => onLike(feed._id)}
-                        >
-                            {isLikedByUser() ? <FaHeart className="me-1 text-danger" /> : <FaRegHeart className="me-1" />}
-                            Like
-                        </Button>
-                        <Button
-                            variant="link"
-                            className="interaction-btn"
-                            onClick={() => setShowComments(!showComments)}
-                        >
-                            <FaRegComment className="me-1" /> Comment
-                        </Button>
-                        <Button variant="link" className="interaction-btn">
-                            <FaShare className="me-1" /> Share
-                        </Button>
-                    </div>
-
-                    {showComments && (
-                        <div className="comments-section mt-3">
-                            <Form onSubmit={handleSubmitComment} className="comment-form mb-3">
-                                <div className="d-flex">
-                                    <div className="comment-avatar me-2" style={{
-                                        backgroundImage: getAvatarSrc(currentUser) ? `url(${getAvatarSrc(currentUser)})` : 'none',
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center'
-                                    }}>
-                                        {!getAvatarSrc(currentUser) && getInitials(currentUser?.name)}
+                        <div className="space-y-4">
+                            {feed.comments?.map((comment, i) => (
+                                <div key={i} className="flex gap-3">
+                                    <div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-gray-800 flex items-center justify-center font-bold text-text-secondary shrink-0">
+                                        {comment.author?.name?.charAt(0).toUpperCase()}
                                     </div>
-                                    <div className="flex-grow-1 position-relative">
-                                        <Form.Control
-                                            type="text"
-                                            placeholder="Write a comment..."
-                                            value={commentText}
-                                            onChange={(e) => setCommentText(e.target.value)}
-                                            className="comment-input"
-                                        />
-                                        <Button
-                                            variant="link"
-                                            type="submit"
-                                            className="comment-submit"
-                                            disabled={!commentText.trim()}
-                                        >
-                                            <FaRegPaperPlane />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Form>
-
-                            {/* Show existing comments or placeholder */}
-                            {feed.comments && feed.comments.length > 0 ? (
-                                <div className="comments-list">
-                                    {feed.comments.map((comment, index) => (
-                                        <div key={index} className="comment-item">
-                                            <div className="comment-avatar" style={{
-                                                backgroundImage: getAvatarSrc(comment.author) ? `url(${getAvatarSrc(comment.author)})` : 'none',
-                                                backgroundSize: 'cover',
-                                                backgroundPosition: 'center'
-                                            }}>
-                                                {!getAvatarSrc(comment.author) && getInitials(comment.author?.name)}
-                                            </div>
-                                            <div className="comment-content">
-                                                <div className="comment-bubble">
-                                                    <h6 className="comment-author">{comment.author?.name || 'Unknown'}</h6>
-                                                    <p className="comment-text">{comment.text}</p>
-                                                </div>
-                                                <div className="comment-actions">
-                                                    <small className="comment-date">{formatDate(comment.timestamp)}</small>
-                                                    <button className="comment-reply-btn">Reply</button>
-                                                </div>
-                                            </div>
+                                    <div className="flex-1 bg-surface border border-border rounded-2xl p-3">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <h5 className="text-sm font-bold">{comment.author?.name}</h5>
+                                            <span className="text-[10px] text-text-secondary">
+                                                {comment.timestamp ? formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true }) : ''}
+                                            </span>
                                         </div>
-                                    ))}
+                                        <p className="text-sm text-text-secondary">{comment.text}</p>
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="no-comments text-center py-2">
-                                    <p className="text-muted mb-0">Be the first to comment on this post!</p>
-                                </div>
-                            )}
+                            ))}
                         </div>
-                    )}
-                </div>
-            </Card.Body>
-
-            {/* Edit Post Modal */}
-            <Modal show={editModalOpen} onHide={() => setEditModalOpen(false)}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Edit Post</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form>
-                        <Form.Group>
-                            <Form.Control
-                                as="textarea"
-                                value={editedContent}
-                                onChange={(e) => setEditedContent(e.target.value)}
-                                rows={5}
-                                className="edit-post-textarea"
-                            />
-                        </Form.Group>
-                    </Form>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button variant="primary" onClick={handleSaveEdit}>
-                        Save Changes
-                    </Button>
-                </Modal.Footer>
-            </Modal>
-        </Card>
+                    </div>
+                )}
+            </div>
+        </ModernCard>
     );
 };
 

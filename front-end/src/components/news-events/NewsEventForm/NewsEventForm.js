@@ -1,24 +1,30 @@
 // src/components/news-events/NewsEventForm/NewsEventForm.js
-import React, { useState, useEffect } from "react";
-import { Form, Button, Container, Card, Row, Col } from 'react-bootstrap';
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import {
+    FaCalendarAlt, FaClock, FaMapMarkerAlt, FaLink,
+    FaPlus, FaEdit, FaChevronLeft, FaTag, FaUsers, FaDollarSign
+} from 'react-icons/fa';
 import { newsEventsService } from '../../../services/api/news-events';
 import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaLink } from 'react-icons/fa';
+import LoadingSkeleton from '../../common/LoadingSkeleton';
+import ModernCard from '../../common/ModernCard';
+import ModernButton from '../../common/ModernButton';
+import Footer from '../../layout/Footer/Footer';
 
 const NewsEventForm = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const { id } = useParams(); // Get ID from URL if editing
+    const { id } = useParams();
     const [isEditing, setIsEditing] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Form state
     const [formData, setFormData] = useState({
         title: "",
         description: "",
-        type: "news", // Default to "news"
+        type: "news",
         eventDate: "",
         eventTime: "",
         location: "",
@@ -29,18 +35,12 @@ const NewsEventForm = () => {
         price: 0,
     });
 
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Fetch news/event data for editing
-    const fetchNewsEvent = React.useCallback(async () => {
+    const fetchNewsEvent = useCallback(async () => {
         try {
             setIsLoading(true);
             const response = await newsEventsService.getById(id);
-
             if (response && response.data) {
                 const eventData = response.data;
-
-                // Set form data
                 setFormData({
                     title: eventData.title || "",
                     description: eventData.description || "",
@@ -57,336 +57,280 @@ const NewsEventForm = () => {
             }
         } catch (error) {
             console.error("Error fetching news/event:", error);
-            toast.error("Failed to load news/event data");
+            toast.error("Failed to load content for editing");
         } finally {
             setIsLoading(false);
         }
     }, [id]);
 
     useEffect(() => {
-        // Set type from URL parameter if present
         const searchParams = new URLSearchParams(location.search);
         const urlType = searchParams.get('type');
         if (urlType) {
-            setFormData(prevData => ({
-                ...prevData,
-                type: urlType
-            }));
+            setFormData(prev => ({ ...prev, type: urlType }));
         }
 
-        // If ID is present, fetch the news/event data for editing
         if (id) {
             setIsEditing(true);
             fetchNewsEvent();
         }
     }, [location.search, id, fetchNewsEvent]);
 
-    // Check if user has permission to create news/events
-    if (!user || !['staff', 'alumni'].includes(user.role?.toLowerCase())) {
-        return (
-            <Container className="py-5 text-center">
-                <h4>Permission Denied</h4>
-                <p>You do not have permission to {isEditing ? 'edit' : 'create'} news or events.</p>
-                <Button variant="primary" onClick={() => navigate(-1)}>Go Back</Button>
-            </Container>
-        );
-    }
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prevData => ({
-            ...prevData,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Validate required fields
         if (!formData.title || !formData.description) {
-            toast.error("Please fill in all required fields");
+            toast.error("Title and description are required");
             return;
         }
 
-        // Validate event-specific fields
         if (formData.type === "event" && (!formData.eventDate || !formData.location)) {
-            toast.error("Please fill in all event details");
+            toast.error("Date and location are required for events");
             return;
         }
 
         try {
             setIsLoading(true);
+            const data = {
+                title: formData.title,
+                description: formData.description,
+                type: formData.type,
+                ...(formData.type === "event" && {
+                    event_date: formData.eventDate,
+                    event_time: formData.eventTime,
+                    location: formData.location,
+                    register_link: formData.registerLink,
+                    category: formData.category,
+                    event_type: formData.eventType,
+                    capacity: formData.capacity,
+                    price: formData.price,
+                })
+            };
 
-            if (isEditing) {
-                // Handle edit
-                const updateData = {
-                    title: formData.title,
-                    description: formData.description,
-                    type: formData.type
-                };
+            const response = isEditing
+                ? await newsEventsService.update(id, data)
+                : await newsEventsService.createNewsEvent(data);
 
-                // Add event-specific fields if applicable
-                if (formData.type === "event") {
-                    updateData.event_date = formData.eventDate;
-                    updateData.event_time = formData.eventTime;
-                    updateData.location = formData.location;
-                    updateData.register_link = formData.registerLink;
-                    updateData.category = formData.category;
-                    updateData.event_type = formData.eventType;
-                    updateData.capacity = formData.capacity;
-                    updateData.price = formData.price;
-                }
-
-                // Send update request
-                const response = await newsEventsService.update(id, updateData);
-
-                if (response.status === 200) {
-                    toast.success("News/Event updated successfully!");
-                    navigate(`/${formData.type === 'news' ? 'news' : 'events'}`);
-                }
-            } else {
-                // Handle create
-                const data = {
-                    title: formData.title,
-                    description: formData.description,
-                    type: formData.type
-                };
-
-                if (formData.type === "event") {
-                    data.event_date = formData.eventDate;
-                    data.event_time = formData.eventTime;
-                    data.location = formData.location;
-                    data.register_link = formData.registerLink;
-                    data.category = formData.category;
-                    data.event_type = formData.eventType;
-                    data.capacity = formData.capacity;
-                    data.price = formData.price;
-                }
-
-                const response = await newsEventsService.createNewsEvent(data);
-
-                if (response) {
-                    toast.success("News/Event created successfully!");
-                    navigate(`/${formData.type === 'news' ? 'news' : 'events'}`);
-                }
+            if (response) {
+                toast.success(`${formData.type} ${isEditing ? 'updated' : 'published'} successfully!`);
+                navigate(`/${formData.type === 'news' ? 'news' : 'events'}`);
             }
         } catch (error) {
-            console.error(`Error ${isEditing ? 'updating' : 'creating'} news/event:`, error);
-            toast.error(error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} news/event`);
+            console.error("Error saving news/event:", error);
+            toast.error(error.response?.data?.message || "Failed to save content");
         } finally {
             setIsLoading(false);
         }
     };
 
+    if (!user || !['staff', 'alumni'].includes(user.role?.toLowerCase())) {
+        return (
+            <div className="min-h-screen pt-24 px-4 flex items-center justify-center">
+                <ModernCard variant="glass" className="max-w-md w-full text-center p-12">
+                    <h2 className="text-3xl font-black text-text-primary mb-4">Access Denied</h2>
+                    <p className="text-text-secondary mb-8">You don't have the required permissions to manage news or events.</p>
+                    <ModernButton variant="primary" onClick={() => navigate(-1)}>Go Back</ModernButton>
+                </ModernCard>
+            </div>
+        );
+    }
+
+    if (isLoading && isEditing) {
+        return (
+            <div className="max-w-3xl mx-auto px-4 py-32">
+                <LoadingSkeleton variant="card" height="400px" />
+            </div>
+        );
+    }
+
+    const fieldClass = "w-full bg-neutral-50/50 border border-border/40 rounded-2xl p-4 text-sm font-bold text-text-primary focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-text-secondary/30";
+    const labelClass = "text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2 flex items-center gap-2";
+
     return (
-        <Container className="py-5">
-            <Card style={{ maxWidth: "52rem" }} className="mx-auto shadow-sm">
-                <Card.Body className="p-4">
-                    <h4 className="mb-4">
-                        {isEditing ? 'Edit' : 'Create New'} {formData.type === 'news' ? 'News' : 'Event'}
-                    </h4>
+        <div className="min-h-screen bg-background pt-24 pb-12 animate-in">
+            <div className="max-w-3xl mx-auto px-4">
+                <div className="flex items-center justify-between mb-8">
+                    <button onClick={() => navigate(-1)} className="inline-flex items-center text-xs font-black uppercase tracking-widest text-text-secondary hover:text-primary transition-colors">
+                        <FaChevronLeft className="mr-2" /> Cancel & Return
+                    </button>
+                </div>
 
-                    {isLoading ? (
-                        <div className="text-center py-4">
-                            <div className="spinner-border text-primary" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </div>
-                            <p className="mt-2">Loading...</p>
+                <ModernCard variant="elevated" padding="p-8 md:p-12" className="border-none shadow-2xl shadow-primary/5">
+                    <div className="flex items-center gap-6 mb-12">
+                        <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-2xl text-primary">
+                            {isEditing ? <FaEdit /> : <FaPlus />}
                         </div>
-                    ) : (
-                        <Form onSubmit={handleSubmit}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Type</Form.Label>
-                                <Form.Select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleInputChange}
-                                    disabled={isEditing} // Cannot change type when editing
-                                >
-                                    <option value="news">News</option>
-                                    <option value="event">Event</option>
-                                </Form.Select>
-                            </Form.Group>
+                        <div>
+                            <h1 className="text-3xl font-black text-text-primary tracking-tighter uppercase leading-none mb-2">
+                                {isEditing ? 'Edit Existing' : 'Create New'} {formData.type}
+                            </h1>
+                            <p className="text-sm font-bold text-text-secondary opacity-60">Complete the details below to publish</p>
+                        </div>
+                    </div>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Title</Form.Label>
-                                <Form.Control
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        {/* Basic Info */}
+                        <div className="grid grid-cols-1 gap-8">
+                            <div className="space-y-4">
+                                <label className={labelClass}>Content Title <span className="text-error">*</span></label>
+                                <input
                                     type="text"
                                     name="title"
                                     value={formData.title}
                                     onChange={handleInputChange}
-                                    placeholder="Enter title"
+                                    className={fieldClass}
+                                    placeholder="Enter a catchy headline..."
                                     required
                                 />
-                            </Form.Group>
+                            </div>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Description</Form.Label>
-                                <Form.Control
-                                    as="textarea"
-                                    rows={4}
+                            <div className="space-y-4">
+                                <label className={labelClass}>Description / Content <span className="text-error">*</span></label>
+                                <textarea
                                     name="description"
                                     value={formData.description}
                                     onChange={handleInputChange}
-                                    placeholder="Enter description"
+                                    className={`${fieldClass} min-h-[200px] resize-none`}
+                                    placeholder="Tell the story or provide event details here..."
                                     required
                                 />
-                            </Form.Group>
-
-                            {/* Show these fields only for events */}
-                            {formData.type === "event" && (
-                                <>
-                                    <Row>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>
-                                                    <FaCalendarAlt className="me-2" />
-                                                    Event Date
-                                                </Form.Label>
-                                                <Form.Control
-                                                    type="date"
-                                                    name="eventDate"
-                                                    value={formData.eventDate}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>
-                                                    <FaClock className="me-2" />
-                                                    Event Time
-                                                </Form.Label>
-                                                <Form.Control
-                                                    type="time"
-                                                    name="eventTime"
-                                                    value={formData.eventTime}
-                                                    onChange={handleInputChange}
-                                                />
-                                                <Form.Text className="text-muted">
-                                                    Optional, but recommended
-                                                </Form.Text>
-                                            </Form.Group>
-                                        </Col>
-                                    </Row>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>
-                                            <FaMapMarkerAlt className="me-2" />
-                                            Location
-                                        </Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            name="location"
-                                            value={formData.location}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter event location"
-                                            required
-                                        />
-                                    </Form.Group>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>
-                                            <FaLink className="me-2" />
-                                            Registration Link
-                                        </Form.Label>
-                                        <Form.Control
-                                            type="url"
-                                            name="registerLink"
-                                            value={formData.registerLink}
-                                            onChange={handleInputChange}
-                                            placeholder="https://example.com/register"
-                                        />
-                                        <Form.Text className="text-muted">
-                                            Optional: Provide a link where users can register for this event
-                                        </Form.Text>
-                                    </Form.Group>
-
-                                    <Row>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Category</Form.Label>
-                                                <Form.Select
-                                                    name="category"
-                                                    value={formData.category}
-                                                    onChange={handleInputChange}
-                                                >
-                                                    <option value="Networking">Networking</option>
-                                                    <option value="Career">Career</option>
-                                                    <option value="Social">Social</option>
-                                                    <option value="Academic">Academic</option>
-                                                </Form.Select>
-                                            </Form.Group>
-                                        </Col>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Event Type</Form.Label>
-                                                <Form.Select
-                                                    name="eventType"
-                                                    value={formData.eventType}
-                                                    onChange={handleInputChange}
-                                                >
-                                                    <option value="In-person">In-person</option>
-                                                    <option value="Virtual">Virtual</option>
-                                                    <option value="Hybrid">Hybrid</option>
-                                                </Form.Select>
-                                            </Form.Group>
-                                        </Col>
-                                    </Row>
-
-                                    <Row>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Capacity</Form.Label>
-                                                <Form.Control
-                                                    type="number"
-                                                    name="capacity"
-                                                    value={formData.capacity}
-                                                    onChange={handleInputChange}
-                                                    placeholder="0 for unlimited"
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                        <Col md={6}>
-                                            <Form.Group className="mb-3">
-                                                <Form.Label>Price ($)</Form.Label>
-                                                <Form.Control
-                                                    type="number"
-                                                    name="price"
-                                                    value={formData.price}
-                                                    onChange={handleInputChange}
-                                                    placeholder="0 for free"
-                                                />
-                                            </Form.Group>
-                                        </Col>
-                                    </Row>
-                                </>
-                            )}
-
-                            <div className="d-flex justify-content-between">
-                                <Button variant="secondary" onClick={() => navigate(-1)}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    type="submit"
-                                    disabled={isLoading}
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                            {isEditing ? 'Updating...' : 'Submitting...'}
-                                        </>
-                                    ) : (
-                                        isEditing ? 'Update' : 'Submit'
-                                    )}
-                                </Button>
                             </div>
-                        </Form>
-                    )}
-                </Card.Body>
-            </Card>
-        </Container>
+                        </div>
+
+                        {/* Event Specific Fields */}
+                        <div className={`space-y-8 pt-8 border-t border-border/40 transition-all duration-500 origin-top ${formData.type === 'event' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden pointer-events-none'}`}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className={labelClass}><FaCalendarAlt className="text-primary text-xs" /> Event Date <span className="text-error">*</span></label>
+                                    <input
+                                        type="date"
+                                        name="eventDate"
+                                        value={formData.eventDate}
+                                        onChange={handleInputChange}
+                                        className={fieldClass}
+                                        required={formData.type === 'event'}
+                                    />
+                                </div>
+                                <div className="space-y-4">
+                                    <label className={labelClass}><FaClock className="text-primary text-xs" /> Commencement Time</label>
+                                    <input
+                                        type="time"
+                                        name="eventTime"
+                                        value={formData.eventTime}
+                                        onChange={handleInputChange}
+                                        className={fieldClass}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className={labelClass}><FaMapMarkerAlt className="text-primary text-xs" /> Venue / Location <span className="text-error">*</span></label>
+                                <input
+                                    type="text"
+                                    name="location"
+                                    value={formData.location}
+                                    onChange={handleInputChange}
+                                    className={fieldClass}
+                                    placeholder="Physical address or virtual room link..."
+                                    required={formData.type === 'event'}
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className={labelClass}><FaLink className="text-primary text-xs" /> External Registration Portal</label>
+                                <input
+                                    type="url"
+                                    name="registerLink"
+                                    value={formData.registerLink}
+                                    onChange={handleInputChange}
+                                    className={fieldClass}
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className={labelClass}><FaTag className="text-primary text-xs" /> Category</label>
+                                    <select
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleInputChange}
+                                        className={fieldClass}
+                                    >
+                                        <option value="Networking">Networking</option>
+                                        <option value="Career">Career Development</option>
+                                        <option value="Social">Social / Mixer</option>
+                                        <option value="Academic">Academic Seminar</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className={labelClass}><FaUsers className="text-primary text-xs" /> Attendance Type</label>
+                                    <select
+                                        name="eventType"
+                                        value={formData.eventType}
+                                        onChange={handleInputChange}
+                                        className={fieldClass}
+                                    >
+                                        <option value="In-person">In-person Only</option>
+                                        <option value="Virtual">Virtual Only</option>
+                                        <option value="Hybrid">Hybrid (Both)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className={labelClass}>Max Capacity</label>
+                                    <input
+                                        type="number"
+                                        name="capacity"
+                                        value={formData.capacity}
+                                        onChange={handleInputChange}
+                                        className={fieldClass}
+                                        placeholder="0 for unlimited"
+                                    />
+                                </div>
+                                <div className="space-y-4">
+                                    <label className={labelClass}><FaDollarSign className="text-primary text-xs" /> Admission Price</label>
+                                    <input
+                                        type="number"
+                                        name="price"
+                                        value={formData.price}
+                                        onChange={handleInputChange}
+                                        className={fieldClass}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Submit Actions */}
+                        <div className="pt-12 flex flex-col md:flex-row gap-4">
+                            <ModernButton
+                                variant="primary"
+                                type="submit"
+                                disabled={isLoading}
+                                className="h-16 flex-1 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20"
+                            >
+                                {isLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Processing...
+                                    </div>
+                                ) : (
+                                    isEditing ? 'Save Changes' : `Publish ${formData.type}`
+                                )}
+                            </ModernButton>
+                        </div>
+                    </form>
+                </ModernCard>
+            </div>
+            <Footer />
+        </div>
     );
 };
 

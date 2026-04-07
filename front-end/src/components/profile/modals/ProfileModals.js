@@ -1,7 +1,33 @@
 import React, { useState } from "react";
-import { Modal, Form, Button, Row, Col } from 'react-bootstrap';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
+import { Modal } from 'react-bootstrap';
+import { FaCheck, FaTimes, FaSave, FaUser, FaCamera } from 'react-icons/fa';
+import ModernButton from '../../common/ModernButton';
+
+// Reusable Form Group Component
+const FormGroup = ({ label, children, className = "" }) => (
+    <div className={`mb-5 ${className}`}>
+        <label className="block text-xs font-bold text-text-primary uppercase tracking-wider mb-2 opacity-60">
+            {label}
+        </label>
+        {children}
+    </div>
+);
+
+// Reusable Input Component
+const Input = ({ ...props }) => (
+    <input
+        {...props}
+        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-text-primary placeholder:text-text-secondary/40"
+    />
+);
+
+// Reusable Textarea Component
+const Textarea = ({ ...props }) => (
+    <textarea
+        {...props}
+        className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-text-primary placeholder:text-text-secondary/40 resize-none"
+    />
+);
 
 // Edit Profile Modal
 export const EditProfileModal = ({
@@ -18,127 +44,114 @@ export const EditProfileModal = ({
             onHide={onHide}
             size="lg"
             centered
+            contentClassName="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-surface dark:bg-gray-900"
         >
-            <Modal.Header closeButton>
-                <Modal.Title>Edit Profile</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form onSubmit={onSubmit}>
-                    <Row>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Name</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={editForm.name}
-                                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                    required
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Department</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={editForm.dept}
-                                    onChange={(e) => setEditForm({ ...editForm, dept: e.target.value })}
-                                    required
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+            <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold text-text-primary">Edit Profile</h2>
+                        <p className="text-text-secondary text-sm">Update your personal information and presence.</p>
+                    </div>
+                    <button
+                        onClick={onHide}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                    >
+                        <FaTimes />
+                    </button>
+                </div>
 
-                    <Row>
-                        {userRole !== 'staff' && (
-                            <>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Register Number</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            value={editForm.regno}
-                                            onChange={(e) => setEditForm({ ...editForm, regno: e.target.value })}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Batch</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            value={editForm.batch}
-                                            onChange={(e) => setEditForm({ ...editForm, batch: e.target.value })}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                            </>
-                        )}
-                    </Row>
+                <form onSubmit={onSubmit} className="space-y-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                        <FormGroup label="Full Name">
+                            <Input
+                                type="text"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                required
+                            />
+                        </FormGroup>
+                        <FormGroup label="Department">
+                            <Input
+                                type="text"
+                                value={editForm.dept}
+                                onChange={(e) => setEditForm({ ...editForm, dept: e.target.value })}
+                                required
+                            />
+                        </FormGroup>
+                    </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Biography</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={3}
+                    {userRole !== 'staff' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                            <FormGroup label="Register Number">
+                                <Input
+                                    type="text"
+                                    value={editForm.regno}
+                                    onChange={(e) => setEditForm({ ...editForm, regno: e.target.value })}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Batch Year">
+                                <Input
+                                    type="text"
+                                    value={editForm.batch}
+                                    onChange={(e) => setEditForm({ ...editForm, batch: e.target.value })}
+                                />
+                            </FormGroup>
+                        </div>
+                    )}
+
+                    <FormGroup label="Professional Bio">
+                        <Textarea
+                            rows={4}
                             value={editForm.bio}
                             onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                            placeholder="Tell us about yourself..."
+                            placeholder="Tell the community about your journey, interests, and goals..."
                         />
-                    </Form.Group>
+                    </FormGroup>
 
-                    <Row>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>LinkedIn Profile</Form.Label>
-                                <Form.Control
-                                    type="url"
-                                    value={editForm.linkedin}
-                                    onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })}
-                                    placeholder="https://linkedin.com/in/yourusername"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>GitHub Profile</Form.Label>
-                                <Form.Control
-                                    type="url"
-                                    value={editForm.github}
-                                    onChange={(e) => setEditForm({ ...editForm, github: e.target.value })}
-                                    placeholder="https://github.com/yourusername"
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                        <FormGroup label="LinkedIn Profile URL">
+                            <Input
+                                type="url"
+                                value={editForm.linkedin}
+                                onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })}
+                                placeholder="https://linkedin.com/in/username"
+                            />
+                        </FormGroup>
+                        <FormGroup label="GitHub Profile URL">
+                            <Input
+                                type="url"
+                                value={editForm.github}
+                                onChange={(e) => setEditForm({ ...editForm, github: e.target.value })}
+                                placeholder="https://github.com/username"
+                            />
+                        </FormGroup>
+                    </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Skills (comma-separated)</Form.Label>
-                        <Form.Control
+                    <FormGroup label="Skills (Comma Separated)">
+                        <Input
                             type="text"
                             value={editForm.skills}
                             onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })}
-                            placeholder="Java, Python, React, etc."
+                            placeholder="e.g. React, Python, UI Design, Marketing"
                         />
-                        <Form.Text className="text-muted">
-                            Enter your skills separated by commas
-                        </Form.Text>
-                    </Form.Group>
+                        <p className="mt-2 text-[10px] text-text-secondary opacity-60">Press enter or use commas to separate skills</p>
+                    </FormGroup>
 
-                    <div className="d-flex justify-content-end mt-4">
-                        <Button
+                    <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+                        <ModernButton
                             variant="secondary"
                             onClick={onHide}
-                            className="me-2"
+                            type="button"
                         >
                             Cancel
-                        </Button>
-                        <Button variant="primary" type="submit">
+                        </ModernButton>
+                        <ModernButton variant="primary" type="submit">
+                            <FaSave className="mr-2" />
                             Save Changes
-                        </Button>
+                        </ModernButton>
                     </div>
-                </Form>
-            </Modal.Body>
+                </form>
+            </div>
         </Modal>
     );
 };
@@ -155,7 +168,6 @@ export const AvatarSelectionModal = ({
 }) => {
     const [gender, setGender] = useState(userGender || 'male');
 
-    // Define avatar options based on user role and gender
     const getAvatarOptions = () => {
         if (userRole === 'student') {
             return gender === 'female'
@@ -184,16 +196,14 @@ export const AvatarSelectionModal = ({
                     { id: 'alum_3', src: '/img/alum_3.jpg', alt: 'Male Alumni 3' }
                 ];
         } else {
-            // Admin/Staff
             return [
                 { id: 'admin', src: '/img/admin.jpg', alt: 'Admin' }
             ];
         }
     };
 
-    // Add default avatar option
     const avatarOptions = [
-        { id: 'default', src: '/img/default.jpg', alt: 'Default Avatar' },
+        { id: 'default', src: '/img/default.png', alt: 'Default Avatar' },
         ...getAvatarOptions()
     ];
 
@@ -203,96 +213,82 @@ export const AvatarSelectionModal = ({
             onHide={onHide}
             centered
             size="lg"
+            contentClassName="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-surface dark:bg-gray-900"
         >
-            <Modal.Header closeButton>
-                <Modal.Title>Choose Your Avatar</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <div className="text-center mb-4">
-                    <p>Select an avatar to use as your profile picture.</p>
+            <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold text-text-primary">Choose Your Avatar</h2>
+                        <p className="text-text-secondary text-sm">Select an persona that represents you best.</p>
+                    </div>
+                    <button
+                        onClick={onHide}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                    >
+                        <FaTimes />
+                    </button>
                 </div>
 
-                <Row className="mb-3 justify-content-center">
-                    <Col md={6}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Gender (for avatar options)</Form.Label>
-                            <Form.Select
-                                value={gender}
-                                onChange={(e) => {
-                                    setGender(e.target.value);
-                                    setSelectedAvatar('default'); // Reset selection when gender changes
-                                }}
-                            >
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                            </Form.Select>
-                        </Form.Group>
-                    </Col>
-                </Row>
+                <div className="mb-8 flex flex-col md:flex-row items-center gap-6 justify-center">
+                    <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-full md:w-auto">
+                        <button
+                            className={`flex-1 md:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all ${gender === 'male' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' : 'text-text-secondary'}`}
+                            onClick={() => { setGender('male'); setSelectedAvatar('default'); }}
+                        >
+                            Male
+                        </button>
+                        <button
+                            className={`flex-1 md:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all ${gender === 'female' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' : 'text-text-secondary'}`}
+                            onClick={() => { setGender('female'); setSelectedAvatar('default'); }}
+                        >
+                            Female
+                        </button>
+                    </div>
+                </div>
 
-                <div className="d-flex flex-wrap justify-content-center gap-4 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[50vh] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
                     {avatarOptions.map((avatar) => (
                         <div
                             key={avatar.id}
-                            className={`avatar-option position-relative ${selectedAvatar === avatar.id ? 'selected' : ''}`}
+                            className={`group cursor-pointer relative rounded-2xl overflow-hidden border-4 transition-all duration-300 ${selectedAvatar === avatar.id ? 'border-primary shadow-lg scale-105' : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700'}`}
                             onClick={() => setSelectedAvatar(avatar.id)}
-                            style={{
-                                cursor: 'pointer',
-                                border: selectedAvatar === avatar.id ? '3px solid #4e73df' : '3px solid transparent',
-                                borderRadius: '8px',
-                                padding: '3px'
-                            }}
                         >
                             <img
                                 src={avatar.src}
                                 alt={avatar.alt}
-                                className="img-thumbnail"
-                                style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px' }}
+                                className="w-full h-32 object-cover"
                             />
-                            {selectedAvatar === avatar.id && (
-                                <div
-                                    className="position-absolute"
-                                    style={{
-                                        top: '5px',
-                                        right: '5px',
-                                        background: '#4e73df',
-                                        borderRadius: '50%',
-                                        width: '24px',
-                                        height: '24px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'white'
-                                    }}
-                                >
-                                    <FontAwesomeIcon icon={faCheck} />
-                                </div>
-                            )}
-                            <div className="text-center mt-1">
-                                <small>{avatar.alt}</small>
+                            <div className={`absolute inset-0 bg-primary/20 flex items-center justify-center transition-opacity ${selectedAvatar === avatar.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                {selectedAvatar === avatar.id ? (
+                                    <div className="bg-white text-primary p-1.5 rounded-full shadow-lg">
+                                        <FaCheck className="text-sm" />
+                                    </div>
+                                ) : (
+                                    <span className="bg-white/90 text-primary text-[10px] font-bold px-2 py-1 rounded-full uppercase">Select</span>
+                                )}
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                                <p className="text-[10px] text-white font-medium truncate">{avatar.alt}</p>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div className="d-flex justify-content-end mt-4">
-                    <Button
+                <div className="flex justify-end gap-3 pt-8 border-t border-border mt-8">
+                    <ModernButton
                         variant="secondary"
                         onClick={onHide}
-                        className="me-2"
                     >
                         Cancel
-                    </Button>
-                    <Button
+                    </ModernButton>
+                    <ModernButton
                         variant="primary"
-                        onClick={() => {
-                            onAvatarSelect(selectedAvatar);
-                        }}
+                        onClick={() => onAvatarSelect(selectedAvatar)}
                     >
-                        Save Avatar
-                    </Button>
+                        Apply Avatar
+                    </ModernButton>
                 </div>
-            </Modal.Body>
+            </div>
         </Modal>
     );
 };
@@ -312,138 +308,141 @@ export const JobProfileModal = ({
             onHide={onHide}
             size="lg"
             centered
+            contentClassName="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-surface dark:bg-gray-900"
         >
-            <Modal.Header closeButton>
-                <Modal.Title>{isEditing ? 'Edit Job Profile' : 'Add Job Profile'}</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form onSubmit={onSubmit}>
-                    <Row>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Company</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={jobProfileForm.company}
-                                    onChange={(e) => setJobProfileForm({ ...jobProfileForm, company: e.target.value })}
-                                    required
-                                    placeholder="Company name"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Job Title</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={jobProfileForm.job_title}
-                                    onChange={(e) => setJobProfileForm({ ...jobProfileForm, job_title: e.target.value })}
-                                    required
-                                    placeholder="Your job title"
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+            <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold text-text-primary">{isEditing ? 'Edit Professional Profile' : 'Professional Profile'}</h2>
+                        <p className="text-text-secondary text-sm">Tell us about your current role and industry.</p>
+                    </div>
+                    <button
+                        onClick={onHide}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                    >
+                        <FaTimes />
+                    </button>
+                </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Location</Form.Label>
-                        <Form.Control
-                            type="text"
-                            value={jobProfileForm.location}
-                            onChange={(e) => setJobProfileForm({ ...jobProfileForm, location: e.target.value })}
-                            placeholder="City, Country"
-                        />
-                    </Form.Group>
+                <form onSubmit={onSubmit}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                        <FormGroup label="Company Name">
+                            <Input
+                                type="text"
+                                value={jobProfileForm.company}
+                                onChange={(e) => setJobProfileForm({ ...jobProfileForm, company: e.target.value })}
+                                required
+                                placeholder="Where do you work?"
+                            />
+                        </FormGroup>
+                        <FormGroup label="Professional Title">
+                            <Input
+                                type="text"
+                                value={jobProfileForm.job_title}
+                                onChange={(e) => setJobProfileForm({ ...jobProfileForm, job_title: e.target.value })}
+                                required
+                                placeholder="What is your role?"
+                            />
+                        </FormGroup>
+                    </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Industry</Form.Label>
-                        <Form.Control
-                            type="text"
-                            value={jobProfileForm.industry}
-                            onChange={(e) => setJobProfileForm({ ...jobProfileForm, industry: e.target.value })}
-                            placeholder="e.g., Information Technology, Education, Finance"
-                        />
-                    </Form.Group>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                        <FormGroup label="Location">
+                            <Input
+                                type="text"
+                                value={jobProfileForm.location}
+                                onChange={(e) => setJobProfileForm({ ...jobProfileForm, location: e.target.value })}
+                                placeholder="City, Remote, etc."
+                            />
+                        </FormGroup>
+                        <FormGroup label="Industry">
+                            <Input
+                                type="text"
+                                value={jobProfileForm.industry}
+                                onChange={(e) => setJobProfileForm({ ...jobProfileForm, industry: e.target.value })}
+                                placeholder="e.g. Fintech, EdTech, SaaS"
+                            />
+                        </FormGroup>
+                    </div>
 
-                    <Row>
-                        <Col md={5}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Start Date</Form.Label>
-                                <Form.Control
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6">
+                        <div className="md:col-span-5">
+                            <FormGroup label="Start Date">
+                                <Input
                                     type="date"
                                     value={jobProfileForm.start_date}
                                     onChange={(e) => setJobProfileForm({ ...jobProfileForm, start_date: e.target.value })}
                                     required
                                 />
-                            </Form.Group>
-                        </Col>
-                        <Col md={2}>
-                            <Form.Group className="mb-3 d-flex align-items-center h-100">
-                                <Form.Check
-                                    type="checkbox"
-                                    id="current-position"
-                                    label="Current"
-                                    checked={jobProfileForm.current}
-                                    onChange={(e) => setJobProfileForm({
-                                        ...jobProfileForm,
-                                        current: e.target.checked,
-                                        end_date: e.target.checked ? '' : jobProfileForm.end_date
-                                    })}
-                                    className="mt-4"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={5}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>End Date</Form.Label>
-                                <Form.Control
+                            </FormGroup>
+                        </div>
+                        <div className="md:col-span-2">
+                            <div className="mb-5 md:mt-8 flex items-center justify-center">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only"
+                                            checked={jobProfileForm.current}
+                                            onChange={(e) => setJobProfileForm({
+                                                ...jobProfileForm,
+                                                current: e.target.checked,
+                                                end_date: e.target.checked ? '' : jobProfileForm.end_date
+                                            })}
+                                        />
+                                        <div className={`w-10 h-6 rounded-full border-2 transition-colors ${jobProfileForm.current ? 'bg-primary border-primary' : 'bg-transparent border-gray-300 dark:border-gray-600'}`}>
+                                            <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${jobProfileForm.current ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-bold text-text-secondary group-hover:text-text-primary transition-colors">Current</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="md:col-span-5">
+                            <FormGroup label="End Date">
+                                <Input
                                     type="date"
                                     value={jobProfileForm.end_date}
                                     onChange={(e) => setJobProfileForm({ ...jobProfileForm, end_date: e.target.value })}
                                     disabled={jobProfileForm.current}
+                                    className={jobProfileForm.current ? 'opacity-40 cursor-not-allowed' : ''}
                                 />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+                            </FormGroup>
+                        </div>
+                    </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Description</Form.Label>
-                        <Form.Control
-                            as="textarea"
+                    <FormGroup label="Career Description">
+                        <Textarea
                             rows={3}
                             value={jobProfileForm.description}
                             onChange={(e) => setJobProfileForm({ ...jobProfileForm, description: e.target.value })}
-                            placeholder="Describe your role and responsibilities"
+                            placeholder="Briefly describe your career focus or key achievements..."
                         />
-                    </Form.Group>
+                    </FormGroup>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Skills (comma-separated)</Form.Label>
-                        <Form.Control
+                    <FormGroup label="Core Skills">
+                        <Input
                             type="text"
                             value={jobProfileForm.skills}
                             onChange={(e) => setJobProfileForm({ ...jobProfileForm, skills: e.target.value })}
-                            placeholder="Project Management, Python, Data Analysis, etc."
+                            placeholder="Management, Leadership, Strategy..."
                         />
-                        <Form.Text className="text-muted">
-                            Enter skills related to this position, separated by commas
-                        </Form.Text>
-                    </Form.Group>
+                    </FormGroup>
 
-                    <div className="d-flex justify-content-end mt-4">
-                        <Button
+                    <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+                        <ModernButton
                             variant="secondary"
                             onClick={onHide}
-                            className="me-2"
+                            type="button"
                         >
                             Cancel
-                        </Button>
-                        <Button variant="primary" type="submit">
+                        </ModernButton>
+                        <ModernButton variant="primary" type="submit">
                             {isEditing ? 'Update Profile' : 'Create Profile'}
-                        </Button>
+                        </ModernButton>
                     </div>
-                </Form>
-            </Modal.Body>
+                </form>
+            </div>
         </Modal>
     );
 };
@@ -463,130 +462,131 @@ export const JobExperienceModal = ({
             onHide={onHide}
             size="lg"
             centered
+            contentClassName="rounded-[2rem] border-none shadow-2xl overflow-hidden bg-surface dark:bg-gray-900"
         >
-            <Modal.Header closeButton>
-                <Modal.Title>
-                    {isEditing ? 'Edit Work Experience' : 'Add Work Experience'}
-                </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form onSubmit={onSubmit}>
-                    <Row>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Company</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={jobExperienceForm.company}
-                                    onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, company: e.target.value })}
-                                    required
-                                    placeholder="Company name"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Job Title</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    value={jobExperienceForm.job_title}
-                                    onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, job_title: e.target.value })}
-                                    required
-                                    placeholder="Your job title"
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+            <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold text-text-primary">{isEditing ? 'Edit Experience' : 'Add Experience'}</h2>
+                        <p className="text-text-secondary text-sm">Add a previous role to your professional timeline.</p>
+                    </div>
+                    <button
+                        onClick={onHide}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                    >
+                        <FaTimes />
+                    </button>
+                </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Location</Form.Label>
-                        <Form.Control
+                <form onSubmit={onSubmit}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                        <FormGroup label="Company">
+                            <Input
+                                type="text"
+                                value={jobExperienceForm.company}
+                                onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, company: e.target.value })}
+                                required
+                                placeholder="Company name"
+                            />
+                        </FormGroup>
+                        <FormGroup label="Job Title">
+                            <Input
+                                type="text"
+                                value={jobExperienceForm.job_title}
+                                onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, job_title: e.target.value })}
+                                required
+                                placeholder="Position held"
+                            />
+                        </FormGroup>
+                    </div>
+
+                    <FormGroup label="Location">
+                        <Input
                             type="text"
                             value={jobExperienceForm.location}
                             onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, location: e.target.value })}
-                            placeholder="City, Country"
+                            placeholder="e.g. London (Remote), New York"
                         />
-                    </Form.Group>
+                    </FormGroup>
 
-                    <Row>
-                        <Col md={5}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Start Date</Form.Label>
-                                <Form.Control
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6">
+                        <div className="md:col-span-5">
+                            <FormGroup label="Start Date">
+                                <Input
                                     type="date"
                                     value={jobExperienceForm.start_date}
                                     onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, start_date: e.target.value })}
                                     required
                                 />
-                            </Form.Group>
-                        </Col>
-                        <Col md={2}>
-                            <Form.Group className="mb-3 d-flex align-items-center h-100">
-                                <Form.Check
-                                    type="checkbox"
-                                    id="current-experience"
-                                    label="Current"
-                                    checked={jobExperienceForm.current}
-                                    onChange={(e) => setJobExperienceForm({
-                                        ...jobExperienceForm,
-                                        current: e.target.checked,
-                                        end_date: e.target.checked ? '' : jobExperienceForm.end_date
-                                    })}
-                                    className="mt-4"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={5}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>End Date</Form.Label>
-                                <Form.Control
+                            </FormGroup>
+                        </div>
+                        <div className="md:col-span-2">
+                            <div className="mb-5 md:mt-8 flex items-center justify-center">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only"
+                                            checked={jobExperienceForm.current}
+                                            onChange={(e) => setJobExperienceForm({
+                                                ...jobExperienceForm,
+                                                current: e.target.checked,
+                                                end_date: e.target.checked ? '' : jobExperienceForm.end_date
+                                            })}
+                                        />
+                                        <div className={`w-10 h-6 rounded-full border-2 transition-colors ${jobExperienceForm.current ? 'bg-primary border-primary' : 'bg-transparent border-gray-300 dark:border-gray-600'}`}>
+                                            <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${jobExperienceForm.current ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-bold text-text-secondary group-hover:text-text-primary transition-colors">Current</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="md:col-span-5">
+                            <FormGroup label="End Date">
+                                <Input
                                     type="date"
                                     value={jobExperienceForm.end_date}
                                     onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, end_date: e.target.value })}
                                     disabled={jobExperienceForm.current}
+                                    className={jobExperienceForm.current ? 'opacity-40 cursor-not-allowed' : ''}
                                 />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+                            </FormGroup>
+                        </div>
+                    </div>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Description</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={3}
+                    <FormGroup label="Experience Summary">
+                        <Textarea
+                            rows={4}
                             value={jobExperienceForm.description}
                             onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, description: e.target.value })}
-                            placeholder="Describe your role and responsibilities"
+                            placeholder="Describe your key responsibilities and impact..."
                         />
-                    </Form.Group>
+                    </FormGroup>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Skills (comma-separated)</Form.Label>
-                        <Form.Control
+                    <FormGroup label="Skills Used">
+                        <Input
                             type="text"
                             value={jobExperienceForm.skills}
                             onChange={(e) => setJobExperienceForm({ ...jobExperienceForm, skills: e.target.value })}
-                            placeholder="Project Management, Python, Data Analysis, etc."
+                            placeholder="List main skills developed in this role"
                         />
-                        <Form.Text className="text-muted">
-                            Enter skills related to this position, separated by commas
-                        </Form.Text>
-                    </Form.Group>
+                    </FormGroup>
 
-                    <div className="d-flex justify-content-end mt-4">
-                        <Button
+                    <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+                        <ModernButton
                             variant="secondary"
                             onClick={onHide}
-                            className="me-2"
+                            type="button"
                         >
                             Cancel
-                        </Button>
-                        <Button variant="primary" type="submit">
-                            {isEditing ? 'Update Experience' : 'Add Experience'}
-                        </Button>
+                        </ModernButton>
+                        <ModernButton variant="primary" type="submit">
+                            {isEditing ? 'Update History' : 'Add History'}
+                        </ModernButton>
                     </div>
-                </Form>
-            </Modal.Body>
+                </form>
+            </div>
         </Modal>
     );
 };
