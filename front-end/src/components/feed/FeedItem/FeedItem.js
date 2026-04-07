@@ -69,7 +69,6 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
                                 >
                                     {authorName}
                                 </Link>
-                                <FaCheckCircle className="text-primary text-xs" title="Verified Member" />
                                 <ModernBadge variant={getRoleVariant(feed.role)} size="sm" className="ml-1 opacity-90 uppercase tracking-tighter italic">
                                     {feed.role || 'Member'}
                                 </ModernBadge>
@@ -92,9 +91,6 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
                                 <FaTrashAlt />
                             </ModernButton>
                         )}
-                        <ModernButton variant="ghost" size="sm" className="p-2 rounded-xl">
-                            <FaEllipsisH />
-                        </ModernButton>
                     </div>
                 </div>
             </div>
@@ -123,14 +119,14 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
             <div className="px-8 py-4 border-y border-border/50 bg-gray-50/30 dark:bg-gray-900/10 flex items-center justify-between text-xs font-black uppercase tracking-widest text-text-secondary">
                 <div className="flex items-center gap-4">
                     <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors">
-                        <span className="text-primary">{likesCount}</span> Endorsements
+                        <span className="text-primary">{likesCount}</span> Likes
                     </span>
                     <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors">
-                        <span className="text-primary">12</span> Insights
+                        <span className="text-primary">{feed.comments?.length || 0}</span> Comments
                     </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="text-primary">4</span> Shared Hub
+                    <span className="text-primary">0</span> Shares
                 </div>
             </div>
 
@@ -145,17 +141,17 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
                         `}
                     >
                         {isLiked ? <FaHeart className="text-lg animate-bounce" /> : <FaRegHeart className="text-lg" />}
-                        <span className="uppercase tracking-widest hidden md:inline">Endorse</span>
+                        <span className="uppercase tracking-widest hidden md:inline">Like</span>
                     </button>
 
                     <button onClick={() => setShowComments(!showComments)} className="flex items-center justify-center gap-3 py-3 rounded-xl text-text-secondary font-black text-sm hover:bg-primary/5 hover:text-primary transition-all">
                         <FaRegComment className="text-lg" />
-                        <span className="uppercase tracking-widest hidden md:inline">Insight</span>
+                        <span className="uppercase tracking-widest hidden md:inline">Comment</span>
                     </button>
 
                     <button className="flex items-center justify-center gap-3 py-3 rounded-xl text-text-secondary font-black text-sm hover:bg-primary/5 hover:text-primary transition-all">
                         <FaRegShareSquare className="text-lg" />
-                        <span className="uppercase tracking-widest hidden md:inline">Syndicate</span>
+                        <span className="uppercase tracking-widest hidden md:inline">Share</span>
                     </button>
                 </div>
 

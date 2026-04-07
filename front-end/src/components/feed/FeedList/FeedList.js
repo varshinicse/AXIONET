@@ -26,9 +26,9 @@ const fetchTrendingTopics = async (userDept) => {
 
 const fetchSuggestedConnections = async (userDept) => {
     return [
-        { id: 1, name: "Tech Innovation Club", role: `${userDept} Group`, avatar: null },
-        { id: 2, name: "Alumni Association", role: `${userDept} Alumni`, avatar: null },
-        { id: 3, name: "Department Connect", role: `${userDept} Network`, avatar: null },
+        { id: 1, name: "Dr. Aruna Singh", role: "AI Research Lead", avatar: null, type: 'person' },
+        { id: 2, name: "Prateek Khanna", role: "Senior SDE @ Microsoft", avatar: null, type: 'person' },
+        { id: 3, name: "Tech Innovation Club", role: `${userDept} Group`, avatar: null, type: 'group' },
     ];
 };
 
@@ -88,7 +88,8 @@ const FeedList = () => {
             author: {
                 name: user?.name || 'Unknown',
                 email: user?.email || 'unknown@example.com',
-                photo_url: user?.photo_url || null
+                photo_url: user?.photo_url || null,
+                role: user?.role
             },
             timestamp: new Date().toISOString()
         };
@@ -159,7 +160,6 @@ const FeedList = () => {
                         <nav className="space-y-1.5">
                             {[
                                 { to: '/', icon: FaHome, label: 'Global Feed', active: true },
-                                { to: '/profile', icon: FaUser, label: 'My Profile' },
                                 { to: '/messages', icon: FaEnvelope, label: 'Direct Messages', badge: '3' },
                                 { to: '/news', icon: FaRss, label: 'Campus News' },
                                 { to: '/jobs', icon: FaBriefcase, label: 'Career Hub' },
@@ -289,11 +289,8 @@ const FeedList = () => {
 
                     {/* Suggested Connections */}
                     <ModernCard padding="p-8" className="border-primary/5 shadow-xl shadow-primary/5">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="p-2.5 bg-primary/10 rounded-xl">
-                                <FaUsers className="text-primary text-xl" />
-                            </div>
-                            <h3 className="font-black text-lg tracking-tight">Hub Suggestions</h3>
+                        <div className="mb-8">
+                            <h3 className="font-black text-lg tracking-tight">Suggestions</h3>
                         </div>
                         <div className="space-y-6">
                             {suggestedConnections.map(conn => (
@@ -305,45 +302,22 @@ const FeedList = () => {
                                         <p className="text-sm font-black truncate text-text-primary">{conn.name}</p>
                                         <p className="text-[10px] font-bold text-text-secondary truncate uppercase tracking-widest mt-1">{conn.role}</p>
                                     </div>
-                                    <ModernButton variant="ghost" size="xs" className="px-3 py-1 font-black text-[10px] uppercase">Join</ModernButton>
+                                    <ModernButton
+                                        variant="ghost"
+                                        size="xs"
+                                        className="px-3 py-1 font-black text-[10px] uppercase whitespace-nowrap"
+                                        onClick={() => conn.type === 'person' ? navigate(`/profile`) : null}
+                                    >
+                                        {conn.type === 'person' ? 'View Profile' : 'Join'}
+                                    </ModernButton>
                                 </div>
                             ))}
                         </div>
                     </ModernCard>
 
-                    {/* Upcoming Events */}
-                    <ModernCard padding="p-8" className="border-success/5 shadow-xl shadow-success/5">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="p-2.5 bg-success/10 rounded-xl">
-                                <FaCalendarAlt className="text-success text-xl" />
-                            </div>
-                            <h3 className="font-black text-lg tracking-tight">Next Milestones</h3>
-                        </div>
-                        <div className="space-y-6">
-                            {upcomingEvents.map(event => (
-                                <div key={event.id} className="flex gap-4 group cursor-pointer">
-                                    <div className="mt-1 group-hover:scale-125 transition-transform duration-normal">
-                                        <event.icon className="text-text-secondary group-hover:text-success" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-black leading-tight text-text-primary group-hover:text-primary transition-colors">{event.title}</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-[10px] font-black py-0.5 px-2 bg-gray-100 dark:bg-gray-800 rounded text-text-secondary uppercase tracking-tighter italic">
-                                                {event.date}
-                                            </span>
-                                            <ModernBadge variant="success" size="sm" dot>
-                                                {event.attendees} IN
-                                            </ModernBadge>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <ModernButton variant="secondary" className="w-full mt-8 py-3 text-[10px] font-black uppercase tracking-widest">Explore All Events</ModernButton>
-                    </ModernCard>
                 </aside>
             </div>
-        </div>
+        </div >
     );
 };
 

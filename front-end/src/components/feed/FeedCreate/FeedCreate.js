@@ -48,7 +48,8 @@ const FeedCreate = ({ onFeedCreated }) => {
                 author: {
                     name: user?.name,
                     email: user?.email,
-                    photo_url: user?.photo_url
+                    photo_url: user?.photo_url,
+                    role: user?.role
                 },
                 timestamp: new Date().toISOString(),
                 image_url: imagePreview // Mock for demo
