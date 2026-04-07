@@ -86,7 +86,7 @@ const fetchUpcomingEvents = async (userDept) => {
     }
 };
 
-const FeedList = () => {
+const FeedList = ({ simulatedRole }) => {
     const [feeds, setFeeds] = useState([]);
     const [trendingTopics, setTrendingTopics] = useState([]);
     const [suggestedConnections, setSuggestedConnections] = useState([]);
@@ -95,7 +95,10 @@ const FeedList = () => {
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
-    const { user } = useAuth();
+    const { user: contextUser } = useAuth();
+
+    // Support simulated role for comparison view
+    const user = simulatedRole ? { ...contextUser, role: simulatedRole } : contextUser;
 
     // Avatar fallback function
     const getAvatarSrc = (userData) => {
@@ -115,7 +118,8 @@ const FeedList = () => {
     const fetchFeeds = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await axios.get('/feeds');
+            const roleParam = simulatedRole ? `?role=${simulatedRole}` : '';
+            const response = await axios.get(`/feeds${roleParam}`);
             setFeeds(response.data);
             setError("");
         } catch (error) {

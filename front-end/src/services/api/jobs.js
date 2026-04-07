@@ -15,11 +15,11 @@ export const jobService = {
         }
     },
 
-    searchJobs: async (query = '', location = '') => {
+    searchJobs: async (query = '', location = '', role = '') => {
         try {
-            const response = await axios.get(`${BASE_URL}/search`, {
-                params: { q: query, location }
-            });
+            const params = { q: query, location };
+            if (role) params.role = role;
+            const response = await axios.get(`${BASE_URL}/search`, { params });
             return response.data;
         } catch (error) {
             throw error;

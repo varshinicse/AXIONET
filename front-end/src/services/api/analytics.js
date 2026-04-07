@@ -3,9 +3,10 @@ import axios from './axios'; // Import your configured Axios instance
 
 export const analyticsService = {
     // Get general analytics data (counts, distributions, etc.)
-    getAnalytics: async () => {
+    getAnalytics: async (role = '') => {
         try {
-            const response = await axios.get('/analytics');
+            const params = role ? { role } : {};
+            const response = await axios.get('/analytics', { params });
             return response.data;
         } catch (error) {
             console.error('Error fetching analytics:', error);

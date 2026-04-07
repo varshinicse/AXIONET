@@ -11,13 +11,14 @@ export const newsEventsService = {
      * @param {string} type - Filter by type (news, event, or all)
      * @returns {Promise} API response
      */
-    getAll: async (page = 1, type = "all") => {
+    getAll: async (page = 1, type = "all", extraParams = {}) => {
         try {
             const response = await axios.get(BASE_URL, {
                 params: {
                     page,
                     type,
-                    limit: 10
+                    limit: 10,
+                    ...extraParams
                 }
             });
             // console.log('Service response:', response);

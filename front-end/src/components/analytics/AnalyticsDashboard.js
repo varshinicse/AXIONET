@@ -52,7 +52,10 @@ const AnalyticsSidebar = ({ activeSection, setActiveSection }) => {
     );
 };
 
-const AnalyticsDashboard = () => {
+const AnalyticsDashboard = ({ simulatedRole }) => {
+    const { user: contextUser } = useAuth();
+    const user = simulatedRole ? { ...contextUser, role: simulatedRole } : contextUser;
+
     const [loading, setLoading] = useState(true);
     const [analyticsData, setAnalyticsData] = useState(null);
     const [activeSection, setActiveSection] = useState('overview');
@@ -62,7 +65,7 @@ const AnalyticsDashboard = () => {
         const fetchAnalytics = async () => {
             try {
                 setLoading(true);
-                const data = await analyticsService.getAnalytics();
+                const data = await analyticsService.getAnalytics(simulatedRole);
                 setAnalyticsData(data);
             } catch (error) {
                 console.error("Error fetching analytics:", error);

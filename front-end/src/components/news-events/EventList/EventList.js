@@ -19,12 +19,16 @@ import { toast } from 'react-toastify';
 import './EventListStyles.css';
 import Footer from '../../layout/Footer/Footer';
 
-const EventList = () => {
+const EventList = ({ simulatedRole }) => {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState(0);
-    const { user } = useAuth();
+    const { user: contextUser } = useAuth();
+
+    // Support simulated role for comparison view
+    const user = simulatedRole ? { ...contextUser, role: simulatedRole } : contextUser;
+
     const navigate = useNavigate();
 
     // Group events by date
@@ -67,7 +71,8 @@ const EventList = () => {
     const fetchEvents = async () => {
         try {
             setLoading(true);
-            const response = await newsEventsService.getAll(1, 'event');
+            const extraParams = simulatedRole ? { role: simulatedRole } : {};
+            const response = await newsEventsService.getAll(1, 'event', extraParams);
 
             if (response.data && response.data.items) {
                 setEvents(response.data.items);

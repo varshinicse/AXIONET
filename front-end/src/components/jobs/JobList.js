@@ -8,7 +8,12 @@ import JobCard from './JobCard';
 import './joblist.css';
 import Footer from '../layout/Footer/Footer';
 
-const JobList = () => {
+import { useAuth } from '../../contexts/AuthContext';
+
+const JobList = ({ simulatedRole }) => {
+    const { user: contextUser } = useAuth();
+    const user = simulatedRole ? { ...contextUser, role: simulatedRole } : contextUser;
+
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('developer');
@@ -20,7 +25,7 @@ const JobList = () => {
         setLoading(true);
         try {
             // API: /jobs/search?q=<keyword>&location=<location>
-            const data = await jobService.searchJobs(searchTerm, locationFilter);
+            const data = await jobService.searchJobs(searchTerm, locationFilter, simulatedRole);
             setJobs(data || []);
             setLoading(false);
         } catch (err) {

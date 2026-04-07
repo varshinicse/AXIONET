@@ -40,6 +40,7 @@ const EventDetail = React.lazy(() => import('./components/news-events/EventDetai
 
 const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword/ResetPassword'));
 const ForgotPassword = React.lazy(() => import('./components/auth/ForgotPassword/ForgotPassword'));
+const RoleSimulator = React.lazy(() => import('./pages/RoleSimulator/RoleSimulator'));
 
 
 function App() {
@@ -252,6 +253,14 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/role-simulator" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <RoleSimulator />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
             <Route path="/messages" element={
               <ProtectedRoute>
                 <MessagingPage />
@@ -263,7 +272,7 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <FeedList />
+                  <RoleSimulator />
                 </Suspense>
               </ProtectedRoute>
             } />
