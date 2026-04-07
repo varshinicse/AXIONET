@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Spinner } from 'react-bootstrap';
 import { analyticsService } from '../../services/api/analytics';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
     FaChartPie, FaGraduationCap, FaUsers, FaBriefcase
 } from 'react-icons/fa';

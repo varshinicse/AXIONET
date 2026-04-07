@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Container, Nav, Card, Badge, Alert } from 'react-bootstrap';
 import { FaUserGraduate, FaUserTie, FaUserShield, FaInfoCircle } from 'react-icons/fa';
 import FeedList from '../../components/feed/FeedList/FeedList';
-import EventList from '../../components/news-events/EventList/EventList';
-import JobList from '../../components/jobs/JobList';
 import AnalyticsDashboard from '../../components/analytics/AnalyticsDashboard';
 import './RoleSimulator.css';
 
