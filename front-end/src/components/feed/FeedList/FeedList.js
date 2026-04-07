@@ -118,13 +118,8 @@ const FeedList = () => {
         <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8 animate-in">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                {/* Left Sidebar - Nav */}
-                <div className="lg:col-span-3 space-y-8 h-fit lg:sticky lg:top-24">
-
-                </div>
-
-                {/* Main Content - Feed */}
-                <main className="lg:col-span-6 space-y-8">
+                {/* Main Content - Feed (Expanded to fill left space) */}
+                <main className="lg:col-span-9 space-y-8">
                     {/* Search & Tabs */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="relative flex-1 group">
