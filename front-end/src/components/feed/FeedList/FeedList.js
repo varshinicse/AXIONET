@@ -122,7 +122,7 @@ const FeedList = () => {
                 <main className="lg:col-span-9 space-y-8">
                     {/* Search & Tabs */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="relative flex-1 group">
+                        <div className="relative w-full md:w-80 group">
                             <div className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-primary transition-colors">
                                 <FaSearch size={18} />
                             </div>
@@ -134,13 +134,13 @@ const FeedList = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start">
+                        <div className="flex flex-1 bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start">
                             {['all', 'trending', 'following'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
                                     className={`
-                                        px-6 py-2.5 rounded-xl text-sm font-black transition-all uppercase tracking-widest
+                                        flex-1 px-6 py-2.5 rounded-xl text-sm font-black transition-all uppercase tracking-widest
                                         ${activeTab === tab
                                             ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
                                             : 'text-text-secondary hover:text-text-primary'

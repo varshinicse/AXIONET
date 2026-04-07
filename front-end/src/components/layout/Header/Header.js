@@ -206,89 +206,92 @@ const Header = ({ onMenuClick }) => {
                     : 'bg-transparent py-2 px-2'
                 }
             `}>
-                <div className="flex items-center justify-between">
-                    {/* Brand */}
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={onMenuClick}
-                            className="p-2.5 rounded-xl hover:bg-primary/5 text-text-primary transition-all active:scale-90"
-                            aria-label="Open Menu"
-                        >
-                            <FaBars className="text-xl" />
-                        </button>
-                        <Link to="/" className="flex items-center transition-all duration-normal hover:scale-105 group">
-                            <div className="transition-all">
-                                <img src="/logo.PNG" alt="AXIONET" className="h-10 w-auto" />
-                            </div>
-                        </Link>
+                <div className="flex flex-col gap-4">
+                    {/* Top Row: Brand & Actions */}
+                    <div className="flex items-center justify-between">
+                        {/* Brand */}
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={onMenuClick}
+                                className="p-2.5 rounded-xl hover:bg-primary/5 text-text-primary transition-all active:scale-90"
+                                aria-label="Open Menu"
+                            >
+                                <FaBars className="text-xl" />
+                            </button>
+                            <Link to="/" className="flex items-center transition-all duration-normal hover:scale-105 group">
+                                <div className="transition-all">
+                                    <img src="/logo.PNG" alt="AXIONET" className="h-10 w-auto" />
+                                </div>
+                            </Link>
+                        </div>
+
+                        {/* Right Side */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={toggleTheme}
+                                className="p-2.5 rounded-xl hover:bg-primary/5 text-text-secondary transition-all hover:scale-110 active:scale-95"
+                                aria-label="Toggle Theme"
+                            >
+                                {isDarkMode ? <FaSun className="text-amber-400" /> : <FaMoon className="text-primary" />}
+                            </button>
+
+                            {user ? (
+                                <div className="relative" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
+                                        className="flex items-center gap-2.5 p-1 pl-1 pr-3 rounded-xl hover:bg-primary/5 transition-all group"
+                                    >
+                                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-primary/20 group-hover:scale-105 transition-all">
+                                            {user.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="hidden md:flex flex-col items-start leading-none gap-1">
+                                            <span className="font-bold text-sm text-text-primary">{user.name}</span>
+                                            <ModernBadge variant="primary" size="sm" className="opacity-80">
+                                                {user.role}
+                                            </ModernBadge>
+                                        </div>
+                                        <FaChevronDown className={`text-[10px] hidden md:block transition-transform duration-normal ${activeDropdown === 'user' ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {activeDropdown === 'user' && (
+                                        <div className="absolute top-full right-0 mt-3 w-56 glass-card p-2 z-[110] animate-in origin-top-right">
+                                            <Link to="/profile" onClick={() => setActiveDropdown(null)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-primary hover:bg-primary/5 transition-all">
+                                                <FaUser className="text-lg" />
+                                                <span className="font-semibold text-sm">My Profile</span>
+                                            </Link>
+                                            <div className="my-1 border-t border-border/50" />
+                                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-error hover:bg-error/5 transition-all">
+                                                <FaSignOutAlt className="text-lg" />
+                                                <span className="font-semibold text-sm">Logout</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <ModernButton variant="primary" size="sm" onClick={() => navigate('/signin')}>
+                                    Sign In
+                                </ModernButton>
+                            )}
+
+                            {/* Mobile Toggle */}
+                            <button
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                className="lg:hidden p-2.5 rounded-xl hover:bg-primary/5 text-text-primary transition-all active:scale-90"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Desktop Menu */}
-                    <div className="hidden lg:flex items-center gap-1">
+                    {/* Bottom Row: Navigation links */}
+                    <div className="hidden lg:flex items-center justify-center gap-1 py-1 border-t border-border/10">
                         <NavItem to="/" icon={FaHome} label="Home" />
                         <NavItem to="/news" icon={FaNewspaper} label="News" />
                         <NavItem to="/events" icon={FaCalendarAlt} label="Events" />
                         {renderRoleMenus()}
                         <NavItem to="/messages" icon={FaEnvelope} label="Messages" />
-                    </div>
-
-                    {/* Right Side */}
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2.5 rounded-xl hover:bg-primary/5 text-text-secondary transition-all hover:scale-110 active:scale-95"
-                            aria-label="Toggle Theme"
-                        >
-                            {isDarkMode ? <FaSun className="text-amber-400" /> : <FaMoon className="text-primary" />}
-                        </button>
-
-                        {user ? (
-                            <div className="relative" ref={dropdownRef}>
-                                <button
-                                    onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
-                                    className="flex items-center gap-2.5 p-1 pl-1 pr-3 rounded-xl hover:bg-primary/5 transition-all group"
-                                >
-                                    <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-primary/20 group-hover:scale-105 transition-all">
-                                        {user.name?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="hidden md:flex flex-col items-start leading-none gap-1">
-                                        <span className="font-bold text-sm text-text-primary">{user.name}</span>
-                                        <ModernBadge variant="primary" size="sm" className="opacity-80">
-                                            {user.role}
-                                        </ModernBadge>
-                                    </div>
-                                    <FaChevronDown className={`text-[10px] hidden md:block transition-transform duration-normal ${activeDropdown === 'user' ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {activeDropdown === 'user' && (
-                                    <div className="absolute top-full right-0 mt-3 w-56 glass-card p-2 z-[110] animate-in origin-top-right">
-                                        <Link to="/profile" onClick={() => setActiveDropdown(null)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-primary hover:bg-primary/5 transition-all">
-                                            <FaUser className="text-lg" />
-                                            <span className="font-semibold text-sm">My Profile</span>
-                                        </Link>
-                                        <div className="my-1 border-t border-border/50" />
-                                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-error hover:bg-error/5 transition-all">
-                                            <FaSignOutAlt className="text-lg" />
-                                            <span className="font-semibold text-sm">Logout</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <ModernButton variant="primary" size="sm" onClick={() => navigate('/signin')}>
-                                Sign In
-                            </ModernButton>
-                        )}
-
-                        {/* Mobile Toggle */}
-                        <button
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="lg:hidden p-2.5 rounded-xl hover:bg-primary/5 text-text-primary transition-all active:scale-90"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-                            </svg>
-                        </button>
                     </div>
                 </div>
             </nav>
