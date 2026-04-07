@@ -9,12 +9,18 @@ import { formatDistanceToNow } from 'date-fns';
 import ModernCard from '../../common/ModernCard';
 import ModernButton from '../../common/ModernButton';
 import ModernBadge from '../../common/ModernBadge';
+import { useConnections } from '../../../contexts/ConnectionsContext';
+import socketService from '../../../services/socketService';
+import messagingService from '../../../services/api/messaging';
+import { toast } from 'react-toastify';
 
 const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
     const [commentText, setCommentText] = useState('');
     const [showComments, setShowComments] = useState(false);
     const [isLiked, setIsLiked] = useState(feed.isLiked || false);
     const [likesCount, setLikesCount] = useState(feed.likesCount || 0);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const { connections } = useConnections();
 
     // Safely handle author which could be a string or an object
     const authorName = typeof feed.author === 'object' ? feed.author?.name : feed.author;
@@ -31,6 +37,35 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
             return formatDistanceToNow(new Date(dateString), { addSuffix: true });
         } catch (e) {
             return '';
+        }
+    };
+
+    const handleShare = async (friend) => {
+        try {
+            // Find or create conversation
+            let conversationId;
+            const conversations = await messagingService.getConversations();
+            const existing = conversations.find(c =>
+                c.participants.includes(friend.id || friend._id) ||
+                (c.other_participants && c.other_participants[0]?.email === friend.email)
+            );
+
+            if (existing) {
+                conversationId = existing._id;
+            } else {
+                const newConv = await messagingService.createConversation([friend.email, currentUser.email]);
+                conversationId = newConv._id;
+            }
+
+            // Send message
+            const shareText = `Shared a post from ${authorName}:\n"${feed.content.substring(0, 50)}${feed.content.length > 50 ? '...' : ''}"`;
+            socketService.sendMessage(conversationId, currentUser.email, shareText);
+
+            toast.success(`Shared with ${friend.name}`);
+            setShowShareModal(false);
+        } catch (err) {
+            console.error('Share failed:', err);
+            toast.error('Failed to share post');
         }
     };
 
@@ -70,7 +105,7 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
                                     {authorName}
                                 </Link>
                                 <ModernBadge variant={getRoleVariant(feed.role)} size="sm" className="ml-1 opacity-90 uppercase tracking-tighter italic">
-                                    {feed.role || 'Member'}
+                                    {(feed.role && feed.role.toLowerCase() !== 'member') ? feed.role : 'Core Student'}
                                 </ModernBadge>
                             </div>
                             <div className="flex items-center gap-2 mt-1 text-text-secondary opacity-60 text-xs font-bold uppercase tracking-widest">
@@ -115,20 +150,6 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
                 )}
             </div>
 
-            {/* Stats */}
-            <div className="px-8 py-4 border-y border-border/50 bg-gray-50/30 dark:bg-gray-900/10 flex items-center justify-between text-xs font-black uppercase tracking-widest text-text-secondary">
-                <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors">
-                        <span className="text-primary">{likesCount}</span> Likes
-                    </span>
-                    <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors">
-                        <span className="text-primary">{feed.comments?.length || 0}</span> Comments
-                    </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="text-primary">0</span> Shares
-                </div>
-            </div>
 
             {/* Actions */}
             <div className="p-3 bg-surface group-hover:bg-gray-50/50 dark:group-hover:bg-gray-900/50 transition-all">
@@ -149,9 +170,36 @@ const FeedItem = ({ feed, onDelete, currentUser, onEdit }) => {
                         <span className="uppercase tracking-widest hidden md:inline">Comment</span>
                     </button>
 
-                    <button className="flex items-center justify-center gap-3 py-3 rounded-xl text-text-secondary font-black text-sm hover:bg-primary/5 hover:text-primary transition-all">
+                    <button
+                        onClick={() => setShowShareModal(!showShareModal)}
+                        className="flex items-center justify-center gap-3 py-3 rounded-xl text-text-secondary font-black text-sm hover:bg-primary/5 hover:text-primary transition-all relative"
+                    >
                         <FaRegShareSquare className="text-lg" />
                         <span className="uppercase tracking-widest hidden md:inline">Share</span>
+
+                        {showShareModal && (
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-surface border border-border rounded-2xl shadow-2xl z-50 p-4 animate-in">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary mb-4 px-2">Share with connection</h4>
+                                <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-hide">
+                                    {connections.length > 0 ? (
+                                        connections.map(friend => (
+                                            <div
+                                                key={friend.id || friend._id}
+                                                onClick={(e) => { e.stopPropagation(); handleShare(friend); }}
+                                                className="flex items-center gap-3 p-2 hover:bg-primary/5 rounded-xl transition-colors cursor-pointer group/item"
+                                            >
+                                                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs group-hover/item:scale-110 transition-transform">
+                                                    {friend.name.charAt(0)}
+                                                </div>
+                                                <span className="text-sm font-bold text-text-primary truncate">{friend.name}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-[10px] text-text-secondary italic text-center py-4 px-2">No active connections found to share with.</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </button>
                 </div>
 

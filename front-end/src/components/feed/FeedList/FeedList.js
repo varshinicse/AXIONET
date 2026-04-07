@@ -118,43 +118,8 @@ const FeedList = () => {
         <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8 animate-in">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                {/* Left Sidebar - Profile & Nav */}
+                {/* Left Sidebar - Nav */}
                 <div className="lg:col-span-3 space-y-8 h-fit lg:sticky lg:top-24">
-                    <ModernCard variant="flat" padding="p-6" className="border-primary/5 shadow-xl">
-                        <div className="h-24 bg-gradient-to-br from-primary via-blue-600 to-blue-400 relative overflow-hidden">
-                            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
-                        </div>
-                        <div className="px-6 pb-6 -mt-12 text-center relative">
-                            <div className="mx-auto h-24 w-24 rounded-2xl bg-surface p-1.5 shadow-2xl shadow-primary/20">
-                                <div className="h-full w-full rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-4xl font-black shadow-inner">
-                                    {user?.name?.charAt(0).toUpperCase()}
-                                </div>
-                            </div>
-                            <h3 className="mt-5 text-2xl font-black tracking-tight text-text-primary">{user?.name}</h3>
-                            <p className="text-sm font-semibold text-text-secondary opacity-70 italic">@{user?.email?.split('@')[0]}</p>
-
-                            <div className="mt-8 pt-8 border-t border-border/50 flex justify-around text-center">
-                                <div className="group cursor-pointer">
-                                    <p className="font-black text-xl text-primary group-hover:scale-110 transition-transform">124</p>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">Following</p>
-                                </div>
-                                <div className="border-l border-border/50 h-10 self-center" />
-                                <div className="group cursor-pointer">
-                                    <p className="font-black text-xl text-primary group-hover:scale-110 transition-transform">850</p>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">Followers</p>
-                                </div>
-                            </div>
-
-                            <ModernButton
-                                variant="secondary"
-                                size="sm"
-                                className="w-full mt-8 border-primary/20 hover:bg-primary text-xs tracking-widest font-black uppercase"
-                                onClick={() => navigate('/profile')}
-                            >
-                                View Detailed Profile
-                            </ModernButton>
-                        </div>
-                    </ModernCard>
 
                     <ModernCard variant="flat" padding="p-3" className="hidden lg:block border-primary/5 shadow-xl">
                         <nav className="space-y-1.5">
