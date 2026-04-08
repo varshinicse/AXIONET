@@ -1,18 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./style_login.css";
 import { useAuth } from '../../../contexts/AuthContext';
 
 const Signin = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('varshini@gmail.com');
+    const [password, setPassword] = useState('password123');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setError('');
         setLoading(true);
 
@@ -45,6 +45,21 @@ const Signin = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Auto-login with default credentials on mount
+    useEffect(() => {
+        const hasAttemptedAutoLogin = sessionStorage.getItem('autoLoginAttempted');
+        if (email === 'varshini@gmail.com' && password === 'password123' && !hasAttemptedAutoLogin) {
+            sessionStorage.setItem('autoLoginAttempted', 'true');
+            handleSubmit();
+        }
+    }, [email, password]);
+
+    const handleQuickLogin = (quickEmail, quickPassword) => {
+        setEmail(quickEmail);
+        setPassword(quickPassword);
+        // The useEffect will trigger handleSubmit due to state changes
     };
 
     return (
@@ -95,6 +110,37 @@ const Signin = () => {
                                     {loading ? 'Logging in...' : 'Login'}
                                 </button>
                             </form>
+
+                            <div className="quick-login mt-4 pt-3 border-top border-secondary">
+                                <p className="text-center mb-2" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>One-click Login:</p>
+                                <div className="d-flex flex-wrap gap-2 justify-content-center">
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-info btn-sm px-3"
+                                        onClick={() => handleQuickLogin('varshini@gmail.com', 'password123')}
+                                        disabled={loading}
+                                    >
+                                        Student
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-success btn-sm px-3"
+                                        onClick={() => handleQuickLogin('vandhana@gmail.com', 'password123')}
+                                        disabled={loading}
+                                    >
+                                        Alumni
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-warning btn-sm px-3"
+                                        onClick={() => handleQuickLogin('staff@example.com', 'password123')}
+                                        disabled={loading}
+                                    >
+                                        Staff
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="text-center mt-3 d-flex justify-content-between align-items-center">
                                 <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Forgot Password?</Link>
                                 <div>

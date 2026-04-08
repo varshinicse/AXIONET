@@ -91,7 +91,7 @@ function App() {
             <Route path="/feeds" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <FeedList />
+                  <FeedList onMenuClick={() => setIsDrawerOpen(true)} />
                 </Suspense>
               </ProtectedRoute>
             } />

@@ -8,7 +8,8 @@ import { toast } from 'react-toastify';
 import {
     FaHome, FaUser, FaEnvelope, FaBriefcase,
     FaCalendarAlt, FaGraduationCap, FaSearch,
-    FaRss, FaChartBar, FaCode, FaLightbulb, FaFire, FaUsers
+    FaRss, FaChartBar, FaCode, FaLightbulb, FaFire, FaUsers,
+    FaBars
 } from 'react-icons/fa';
 import ModernCard from '../../common/ModernCard';
 import ModernButton from '../../common/ModernButton';
@@ -39,7 +40,7 @@ const fetchUpcomingEvents = async (userDept) => {
     ];
 };
 
-const FeedList = () => {
+const FeedList = ({ onMenuClick }) => {
     const [feeds, setFeeds] = useState([]);
     const [trendingTopics, setTrendingTopics] = useState([]);
     const [suggestedConnections, setSuggestedConnections] = useState([]);
@@ -120,19 +121,27 @@ const FeedList = () => {
 
                 {/* Main Content - Feed (Expanded to fill left space) */}
                 <main className="lg:col-span-9 space-y-8">
-                    {/* Search & Tabs */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="relative w-full md:w-80 group">
-                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-primary transition-colors">
-                                <FaSearch size={18} />
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                            <button
+                                onClick={onMenuClick}
+                                className="p-4 rounded-2xl bg-surface border-2 border-border/50 text-text-primary hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95 shadow-sm"
+                                aria-label="Open Menu"
+                            >
+                                <FaBars className="text-xl" />
+                            </button>
+                            <div className="relative flex-1 md:w-80 group">
+                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-primary transition-colors">
+                                    <FaSearch size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search community..."
+                                    className="w-full pl-14 pr-6 py-4 rounded-2xl bg-surface border-2 border-border/50 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all outline-none font-medium shadow-sm hover:shadow-md"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
-                            <input
-                                type="text"
-                                placeholder="Search community..."
-                                className="w-full pl-14 pr-6 py-4 rounded-2xl bg-surface border-2 border-border/50 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all outline-none font-medium shadow-sm hover:shadow-md"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
                         </div>
                         <div className="flex flex-1 bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start">
                             {['all', 'trending', 'following'].map((tab) => (
@@ -245,7 +254,7 @@ const FeedList = () => {
                     </ModernCard>
 
                 </aside>
-            </div>
+            </div >
         </div >
     );
 };

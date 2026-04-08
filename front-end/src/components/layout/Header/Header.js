@@ -211,17 +211,13 @@ const Header = ({ onMenuClick }) => {
                     <div className="flex items-center justify-between">
                         {/* Brand */}
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={onMenuClick}
-                                className="p-2.5 rounded-xl hover:bg-primary/5 text-text-primary transition-all active:scale-90"
-                                aria-label="Open Menu"
-                            >
-                                <FaBars className="text-xl" />
-                            </button>
-                            <Link to="/" className="flex items-center transition-all duration-normal hover:scale-105 group">
+                            <Link to="/" className="flex items-center gap-3 transition-all duration-normal hover:scale-105 group">
                                 <div className="transition-all">
                                     <img src="/logo.PNG" alt="AXIONET" className="h-10 w-auto" />
                                 </div>
+                                <span className="font-black text-2xl tracking-tighter text-text-primary uppercase">
+                                    AXIONET
+                                </span>
                             </Link>
                         </div>
 

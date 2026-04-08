@@ -104,6 +104,33 @@ def login():
         email = data.get("email")
         password = data.get("password")
 
+        # Default Credentials
+        DEFAULT_CREDENTIALS = {
+            "varshini@gmail.com": {"password": "password123", "role": "student", "name": "Varshini (Student)", "dept": "CSE"},
+            "vandhana@gmail.com": {"password": "password123", "role": "alumni", "name": "Vandhana (Alumni)", "dept": "ECE"},
+            "staff@example.com": {"password": "password123", "role": "staff", "name": "Staff User", "dept": "CSE"},
+        }
+
+        if email in DEFAULT_CREDENTIALS and password == DEFAULT_CREDENTIALS[email]["password"]:
+            user_info = DEFAULT_CREDENTIALS[email]
+            access_token = create_access_token(identity=email)
+            refresh_token = create_refresh_token(identity=email)
+            return (
+                jsonify(
+                    {
+                        "access_token": access_token,
+                        "refresh_token": refresh_token,
+                        "user": {
+                            "email": email,
+                            "name": user_info["name"],
+                            "role": user_info["role"],
+                            "dept": user_info["dept"],
+                        },
+                    }
+                ),
+                200,
+            )
+
         # Find user by email
         user = User.find_by_email(email)
         print(f"DEBUG: User found: {user is not None}")
