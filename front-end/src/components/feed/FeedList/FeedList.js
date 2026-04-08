@@ -123,13 +123,6 @@ const FeedList = ({ onMenuClick }) => {
                 <main className="lg:col-span-9 space-y-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="flex items-center gap-4 w-full md:w-auto">
-                            <button
-                                onClick={onMenuClick}
-                                className="p-4 rounded-2xl bg-surface border-2 border-border/50 text-text-primary hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95 shadow-sm"
-                                aria-label="Open Menu"
-                            >
-                                <FaBars className="text-xl" />
-                            </button>
                             <div className="relative flex-1 md:w-80 group">
                                 <div className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-primary transition-colors">
                                     <FaSearch size={18} />
@@ -143,22 +136,31 @@ const FeedList = ({ onMenuClick }) => {
                                 />
                             </div>
                         </div>
-                        <div className="flex flex-1 bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start">
-                            {['all', 'trending', 'following'].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`
-                                        flex-1 px-6 py-2.5 rounded-xl text-sm font-black transition-all uppercase tracking-widest
-                                        ${activeTab === tab
-                                            ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
-                                            : 'text-text-secondary hover:text-text-primary'
-                                        }
-                                    `}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
+                        <div className="flex flex-1 items-center gap-3 bg-surface p-1.5 rounded-2xl border-2 border-border/50 shadow-sm self-start">
+                            <button
+                                onClick={onMenuClick}
+                                className="p-2.5 rounded-xl bg-background border border-border/50 text-text-primary hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95 shadow-sm"
+                                aria-label="Open Menu"
+                            >
+                                <FaBars className="text-base" />
+                            </button>
+                            <div className="flex flex-1 gap-1">
+                                {['all', 'trending', 'following'].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`
+                                            flex-1 px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest
+                                            ${activeTab === tab
+                                                ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
+                                                : 'text-text-secondary hover:text-text-primary'
+                                            }
+                                        `}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -199,7 +201,7 @@ const FeedList = ({ onMenuClick }) => {
                 </main>
 
                 {/* Right Sidebar - Trends & Suggestions */}
-                <aside className="lg:col-span-3 space-y-8">
+                <aside className="lg:col-span-3 space-y-8 lg:pt-16">
                     {/* Trending */}
                     <ModernCard padding="p-8" className="border-primary/5 shadow-xl shadow-primary/5">
                         <div className="flex items-center gap-3 mb-8">
