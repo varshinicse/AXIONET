@@ -198,7 +198,7 @@ const Header = ({ onMenuClick }) => {
     };
 
     return (
-        <header className={`fixed top-0 left-0 right-0 z-[1000] px-4 md:px-6 py-4 transition-all duration-500`}>
+        <header className={`fixed top-0 left-0 right-0 z-[1000] px-4 md:px-6 py-2 transition-all duration-500`}>
             <nav className={`
                 mx-auto max-w-7xl transition-all duration-500 rounded-2xl
                 ${scrolled
@@ -206,7 +206,7 @@ const Header = ({ onMenuClick }) => {
                     : 'bg-transparent py-2 px-2'
                 }
             `}>
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
                     {/* Top Row: Brand & Actions */}
                     <div className="flex items-center justify-between">
                         {/* Brand */}

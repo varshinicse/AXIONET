@@ -71,7 +71,7 @@ function App() {
       <div className="app min-h-screen bg-background">
         {showHeader && <Header onMenuClick={() => setIsDrawerOpen(true)} />}
         <NavDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
-        <main className={showHeader ? "pt-[140px] pb-12" : ""}>
+        <main className={showHeader ? "pt-[160px] pb-12" : ""}>
           <Routes>
             {/* Public Routes - keep these without Suspense */}
             <Route path="/signin" element={<Signin />} />
