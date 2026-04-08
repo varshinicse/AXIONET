@@ -116,7 +116,7 @@ const FeedList = ({ onMenuClick }) => {
     );
 
     return (
-        <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-6 lg:px-8 animate-in">
+        <div className="min-h-screen bg-background pb-12 px-4 md:px-6 lg:px-8 animate-in">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                 {/* Main Content - Feed (Expanded to fill left space) */}

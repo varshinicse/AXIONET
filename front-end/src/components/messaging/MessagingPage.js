@@ -148,7 +148,7 @@ const MessagingPage = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-100px)] pt-4 flex gap-6 px-6 animate-in">
+        <div className="h-[calc(100vh-160px)] flex gap-6 px-6 animate-in">
             {/* Sidebar - Conversations */}
             <ModernCard
                 variant="flat"
