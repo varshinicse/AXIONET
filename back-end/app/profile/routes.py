@@ -12,7 +12,7 @@ profile_bp = Blueprint("profile", __name__)
 users_collection = User
 
 
-@profile_bp.route("/", methods=["GET", "PUT"])
+@profile_bp.route("", methods=["GET", "PUT"])
 @jwt_required()
 def handle_profile():
     current_user = get_jwt_identity()

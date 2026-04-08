@@ -113,6 +113,22 @@ def login():
 
         if email in DEFAULT_CREDENTIALS and password == DEFAULT_CREDENTIALS[email]["password"]:
             user_info = DEFAULT_CREDENTIALS[email]
+            
+            # Check if user already exists in DB
+            db_user = User.find_by_email(email)
+            if not db_user:
+                # Register the user in the database so they have an ID and profile
+                print(f"DEBUG: Auto-registering demo user: {email}")
+                User.register({
+                    "name": user_info["name"],
+                    "email": email,
+                    "password": password,
+                    "role": user_info["role"],
+                    "dept": user_info["dept"],
+                    "regno": "DEMO_" + email.split("@")[0].upper(),
+                    "batch": 2024
+                })
+            
             access_token = create_access_token(identity=email)
             refresh_token = create_refresh_token(identity=email)
             return (
@@ -190,51 +206,6 @@ def refresh():
         current_app.logger.error(f"Token refresh error: {str(e)}")
         return jsonify(message="Token refresh failed"), 401
 
-
-@auth_bp.route("/profile", methods=["GET"])
-@jwt_required()
-def get_profile():
-    try:
-        current_user = get_jwt_identity()
-        user = User.find_by_email(current_user)
-
-        if not user:
-            return jsonify({"message": "User not found"}), 404
-
-        # Remove sensitive information
-        user_data = {
-            "email": user["email"],
-            "name": user["name"],
-            "role": user.get("role", "user"),
-            "dept": user.get("dept"),
-            "regno": user.get("regno"),
-            "batch": user.get("batch"),
-            "photo_url": user.get("photo_url"),
-            "_id": str(user["_id"]),
-        }
-
-        return jsonify(user_data), 200
-
-    except Exception as e:
-        current_app.logger.error(f"Error in profile route: {str(e)}")
-        return jsonify({"message": "Internal server error"}), 500
-
-
-@auth_bp.route("/profile", methods=["PUT"])
-@jwt_required()
-def update_profile():
-    try:
-        current_user = get_jwt_identity()
-        data = request.get_json()
-        success = User.update_profile(current_user, data)
-
-        if success:
-            return jsonify({"message": "Profile updated successfully"}), 200
-        else:
-            return jsonify({"message": "Failed to update profile"}), 400
-    except Exception as e:
-        current_app.logger.error(f"Error updating profile: {str(e)}")
-        return jsonify({"message": "Internal server error"}), 500
 
 
 @auth_bp.route("/submit-bug-report", methods=["POST"])

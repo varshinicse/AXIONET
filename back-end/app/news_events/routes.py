@@ -156,6 +156,24 @@ def handle_news_events():
             # Create news/event
             result = NewsEvent.create(data)
 
+            # --- Cross-post to Feed (LinkedIn-style) ---
+            from app.feeds.models import Feed
+            try:
+                feed_content = f"📢 {data['title']}: {data['description'][:150]}..."
+                if data['type'] == 'event':
+                    feed_content = f"📅 EVENT: {data['title']}\n📍 {data.get('location', 'TBD')}\n🕒 {data.get('event_date', 'TBD')}\n\n{data['description'][:150]}..."
+                
+                Feed.create(
+                    author_email=current_user,
+                    content=feed_content,
+                    post_type="news" if data['type'] == 'news' else "event",
+                    reference_id=str(result),
+                    image_url=data.get("image_url")
+                )
+            except Exception as feed_err:
+                current_app.logger.error(f"Failed to cross-post to feed: {str(feed_err)}")
+            # ------------------------------------------
+
             return jsonify({"id": str(result)}), 201
 
         except Exception as e:

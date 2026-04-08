@@ -19,12 +19,20 @@ class Job:
             str: ID of the created job
         """
         try:
+            # Ensure posted_by is ObjectId if it's a string
+            posted_by = data.get("posted_by")
+            if isinstance(posted_by, str):
+                try:
+                    posted_by = ObjectId(posted_by)
+                except:
+                    pass
+
             job_data = {
                 "title": data["title"],
                 "company": data["company"],
                 "location": data["location"],
                 "description": data["description"],
-                "posted_by": data["posted_by"],
+                "posted_by": posted_by,
                 "salary": data.get("salary"), # New field
                 "experience": data.get("experience"), # New field
                 "skills": data.get("skills", []), # New field

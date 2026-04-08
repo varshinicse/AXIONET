@@ -171,7 +171,7 @@ def create_job():
 
 @jobs_bp.route("/search", methods=["GET"])
 def search_jobs():
-    """Fetch jobs from both Adzuna and RapidAPI, store in MongoDB, and return merged list."""
+    """Fetch jobs from both Adzuna and RapidAPI, and return merged list."""
     query = request.args.get("q", "")
     location = request.args.get("location", "")
 
@@ -180,20 +180,19 @@ def search_jobs():
 
     # 1. Fetch from Adzuna
     adzuna_jobs = fetch_adzuna_jobs(query, location)
-    if adzuna_jobs:
-        Job.upsert_external_jobs(adzuna_jobs, "adzuna")
     
     # 2. Fetch from RapidAPI JSearch
     rapidapi_jobs = fetch_rapidapi_jobs(query, location)
-    if rapidapi_jobs:
-        Job.upsert_external_jobs(rapidapi_jobs, "rapidapi")
 
-    # 3. Combine and return matching jobs from MongoDB (deduplicated by upsert logic)
-    results = Job.search(query)
+    # 3. Get matching jobs from MongoDB (internal jobs or previously cached ones)
+    internal_results = Job.search(query)
     
-    # If location was provided, filter results by location too
+    # Filter internal results by location too if provided
     if location:
-        results = [j for j in results if location.lower() in j.get("location", "").lower()]
+        internal_results = [j for j in internal_results if location.lower() in j.get("location", "").lower()]
+
+    # Combine results
+    results = internal_results + adzuna_jobs + rapidapi_jobs
 
     return jsonify(results), 200
 

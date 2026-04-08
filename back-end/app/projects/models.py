@@ -165,9 +165,48 @@ class Project:
                 if "updated_at" in project:
                     project["updated_at"] = project["updated_at"].isoformat()
 
+                # Get creator details
+                author = users_collection.find_one({"_id": ObjectId(project["created_by"])})
+                if author:
+                    project["creator"] = {
+                        "_id": str(author["_id"]),
+                        "name": author.get("name", "Unknown"),
+                        "email": author.get("email", ""),
+                        "dept": author.get("dept", "Unknown"),
+                        "role": author.get("role", "student")
+                    }
+
                 # Process collaborators
-                if "collaborators" in project:
-                    project["collaborators"] = []
+                if "collaborators" in project and project["collaborators"]:
+                    enriched_collaborators = []
+                    for collab in project["collaborators"]:
+                        collab_id = None
+                        collab_info = {}
+
+                        if isinstance(collab, dict):
+                            collab_id = collab.get("id") or collab.get("user_id")
+                            collab_info = collab
+                        elif isinstance(collab, (ObjectId, str)):
+                            collab_id = collab
+
+                        if collab_id:
+                            if isinstance(collab_id, str):
+                                try:
+                                    collab_id = ObjectId(collab_id)
+                                except:
+                                    pass
+                            
+                            user = users_collection.find_one({"_id": collab_id})
+                            if user:
+                                collab_info.update({
+                                    "id": str(user["_id"]),
+                                    "name": user.get("name", "Unknown"),
+                                    "dept": user.get("dept", "Unknown"),
+                                    "email": user.get("email", ""),
+                                    "role": user.get("role", "student")
+                                })
+                                enriched_collaborators.append(collab_info)
+                    project["collaborators"] = enriched_collaborators
 
             return project
 
