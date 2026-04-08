@@ -215,7 +215,7 @@ const Header = ({ onMenuClick }) => {
                                 <div className="transition-all">
                                     <img src="/logo.PNG" alt="AXIONET" className="h-10 w-auto" />
                                 </div>
-                                <span className="font-black text-2xl tracking-tighter text-text-primary uppercase">
+                                <span className="font-black text-2xl tracking-tighter uppercase gradient-title">
                                     AXIONET
                                 </span>
                             </Link>
